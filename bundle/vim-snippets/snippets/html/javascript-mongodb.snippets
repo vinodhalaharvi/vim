@@ -1,0 +1,35 @@
+snippet mongodb_scaffold
+	var mongodb = require('mongodb');
+	var MongoClient = mongodb.MongoClient;
+	var url = 'mongodb://${1:localhost}:${2:27017}/${3:databasename}';
+	MongoClient.connect(url, function (err, db) {
+	if (err) {
+		console.log('Error.');
+		${4}
+	} else {
+		//do the work 
+		${5}
+		db.close();
+	}
+	});
+	${0}
+
+snippet mongodb_insert	
+	${1:db}.${2:collection}.insert(${3}); 
+
+snippet mongodb_createCollection
+	${1:db}.createCollection("${2:collection}"); 
+
+
+snippet mongodb_update
+	${1:db}.collection.update(
+		{},
+		{ $set: { join_date: new Date() } },
+		{ multi: true }
+	); 
+
+snippet mongodb_createIndex
+	${1:db}.${2:collection}.createIndex( { ${3:key}: ${4:value} } )
+
+snippet mongodb_drop
+	${1:db}.${2:collection}.drop()

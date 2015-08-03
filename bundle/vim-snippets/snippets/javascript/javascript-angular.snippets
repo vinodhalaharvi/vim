@@ -1,0 +1,327 @@
+snippet ngisArrayLike
+	angular.isArrayLike(${1:obj}) ${0}
+
+snippet ngforEach
+	angular.forEach(${1:obj}, ${2:iterator}, ${3:context}) ${0}
+
+snippet ngforEachSorted
+	angular.forEachSorted(${1:obj}, ${2:iterator}, ${3:context}) ${0}
+
+snippet ngreverseParams
+	angular.reverseParams(${1:iteratorFn}) ${0}
+
+snippet ngnextUid
+	angular.nextUid() ${0}
+
+snippet ngsetHashKey
+	angular.setHashKey(${1:obj}, ${2:h}) ${0}
+
+snippet ngbaseExtend
+	angular.baseExtend(${1:dst}, ${2:objs}, ${3:deep}) ${0}
+
+snippet ngextend
+	angular.extend(${1:dst}) ${0}
+
+snippet ngmerge
+	angular.merge(${1:dst}) ${0}
+
+snippet ngtoInt
+	angular.toInt(${1:str}) ${0}
+
+snippet nginherit
+	angular.inherit(${1:parent}, ${2:extra}) ${0}
+
+snippet ngfoo
+	angular.foo(${1:callback}) ${0}
+
+snippet ngnoop
+	angular.noop() ${0}
+
+snippet ngtransformer
+	angular.transformer(${1:transformationFn}, ${2:value}) ${0}
+
+snippet ngidentity
+	angular.identity($) ${0}
+
+snippet ngvalueFn
+	angular.valueFn(${1:value}) ${0}
+
+snippet nghasCustomToString
+	angular.hasCustomToString(${1:obj}) ${0}
+
+snippet ngisUndefined
+	angular.isUndefined(${1:value}) ${0}
+
+snippet ngisDefined
+	angular.isDefined(${1:value}) ${0}
+
+snippet ngisObject
+	angular.isObject(${1:value}) ${0}
+
+snippet ngisBlankObject
+	angular.isBlankObject(${1:value}) ${0}
+
+snippet ngisString
+	angular.isString(${1:value}) ${0}
+
+snippet ngisNumber
+	angular.isNumber(${1:value}) ${0}
+
+snippet ngisDate
+	angular.isDate(${1:value}) ${0}
+
+snippet ngisFunction
+	angular.isFunction(${1:value}) ${0}
+
+snippet ngisRegExp
+	angular.isRegExp(${1:value}) ${0}
+
+snippet ngisWindow
+	angular.isWindow(${1:obj}) ${0}
+
+snippet ngisScope
+	angular.isScope(${1:obj}) ${0}
+
+snippet ngisFile
+	angular.isFile(${1:obj}) ${0}
+
+snippet ngisFormData
+	angular.isFormData(${1:obj}) ${0}
+
+snippet ngisBlob
+	angular.isBlob(${1:obj}) ${0}
+
+snippet ngisBoolean
+	angular.isBoolean(${1:value}) ${0}
+
+snippet ngisPromiseLike
+	angular.isPromiseLike(${1:obj}) ${0}
+
+snippet ngisTypedArray
+	angular.isTypedArray(${1:value}) ${0}
+
+snippet ngisElement
+	angular.isElement(${1:node}) ${0}
+
+snippet ngmakeMap
+	angular.makeMap(${1:str}) ${0}
+
+snippet ngnodeName_
+	angular.nodeName_(${1:element}) ${0}
+
+snippet ngincludes
+	angular.includes(${1:array}, ${2:obj}) ${0}
+
+snippet ngarrayRemove
+	angular.arrayRemove(${1:array}, ${2:value}) ${0}
+
+snippet ngcopy
+	angular.copy(${1:source}, ${2:destination}, ${3:stackSource}, ${4:stackDest}) ${0}
+
+snippet ngshallowCopy
+	angular.shallowCopy(${1:src}, ${2:dst}) ${0}
+
+snippet ngequals
+	angular.equals(${1:o1}, ${2:o2}) ${0}
+
+snippet ngnoUnsafeEval
+	angular.noUnsafeEval() ${0}
+
+snippet ngconcat
+	angular.concat(${1:array1}, ${2:array2}, ${3:index}) ${0}
+
+snippet ngsliceArgs
+	angular.sliceArgs(${1:args}, ${2:startIndex}) ${0}
+
+snippet ngbind
+	angular.bind(${1:self}, ${2:fn}) ${0}
+
+snippet ngtoJsonReplacer
+	angular.toJsonReplacer(${1:key}, ${2:value}) ${0}
+
+snippet ngtoJson
+	angular.toJson(${1:obj}, ${2:pretty}) ${0}
+
+snippet ngfromJson
+	angular.fromJson(${1:json}) ${0}
+
+snippet ngtimezoneToOffset
+	angular.timezoneToOffset(${1:timezone}, ${2:fallback}) ${0}
+
+snippet ngaddDateMinutes
+	angular.addDateMinutes(${1:date}, ${2:minutes}) ${0}
+
+snippet ngconvertTimezoneToLocal
+	angular.convertTimezoneToLocal(${1:date}, ${2:timezone}, ${3:reverse}) ${0}
+
+snippet ngstartingTag
+	angular.startingTag(${1:element}) ${0}
+
+snippet ngtryDecodeURIComponent
+	angular.tryDecodeURIComponent(${1:value}) ${0}
+
+snippet ngparseKeyValue
+	angular.parseKeyValue(/**string*/${1:keyValue}) ${0}
+
+snippet ngtoKeyValue
+	angular.toKeyValue(${1:obj}) ${0}
+
+snippet ngencodeUriSegment
+	angular.encodeUriSegment(${1:val}) ${0}
+
+snippet ngencodeUriQuery
+	angular.encodeUriQuery(${1:val}, ${2:pctEncodeSpaces}) ${0}
+
+snippet nggetNgAttribute
+	angular.getNgAttribute(${1:element}, ${2:ngAttr}) ${0}
+
+snippet ngGoodController2
+	angular.GoodController2($${1:scope}) ${0}
+
+snippet ngangularInit
+	angular.angularInit(${1:element}, ${2:bootstrap}) ${0}
+
+snippet ngbootstrap
+	angular.bootstrap(${1:element}, ${2:modules}, ${3:config}) ${0}
+
+snippet ngbootstrapApply
+	angular.bootstrapApply(${1:scope}, ${2:element}, ${3:compile}, ${4:injector}) ${0}
+
+snippet ngreloadWithDebugInfo
+	angular.reloadWithDebugInfo() ${0}
+
+snippet nggetTestability
+	angular.getTestability(${1:rootElement}) ${0}
+
+snippet ngsnake_case
+	angular.snake_case(${1:name}, ${2:separator}) ${0}
+
+snippet ngbindJQuery
+	angular.bindJQuery() ${0}
+
+snippet ngassertArg
+	angular.assertArg(${1:arg}, ${2:name}, ${3:reason}) ${0}
+
+snippet ngassertArgFn
+	angular.assertArgFn(${1:arg}, ${2:name}, ${3:acceptArrayAnnotation}) ${0}
+
+snippet ngassertNotHasOwnProperty
+	angular.assertNotHasOwnProperty(${1:name}, ${2:context}) ${0}
+
+snippet nggetter
+	angular.getter(${1:obj}, ${2:path}, ${3:bindFnToScope}) ${0}
+
+snippet nggetBlockNodes
+	angular.getBlockNodes(${1:nodes}) ${0}
+
+snippet ngcreateMap
+	angular.createMap() ${0}
+
+snippet nginput_text
+	<input type="${1:text}" name="${2:input}" ng-model="example.text"
+		ng-pattern="example.word" required ng-trim="${3:false}">
+
+snippet nginput_date
+	<input type="${1:date}" id="${2:exampleInput}" name="${3:input}" ng-model="example.value"
+		placeholder="yyyy-MM-dd" min="2013-01-01" max="2013-12-31" required />
+
+snippet nginput_datetime
+	<input type="datetime-local" id="${1:exampleInput}" name="${2:input}" ng-model="example.value"
+		placeholder="yyyy-MM-ddTHH:mm:ss" min="2001-01-01T00:00:00" max="2013-12-31T00:00:00" required />
+
+snippet nginput_time
+	<input type="${1:time}" id="${2:exampleInput}" name="${3:input}" ng-model="example.value"
+		placeholder="HH:mm:ss" min="08:00:00" max="17:00:00" required />
+
+snippet nginput_week
+	<input id="${1:exampleInput}" type="${2:week}" name="${3:input}" ng-model="example.value"
+		placeholder="YYYY-W##" min="2012-W32"
+		max="2013-W52" required />
+
+snippet nginput_month
+	<input id="${1:exampleInput}" type="${2:month}" name="${3:input}" ng-model="example.value"
+		placeholder="yyyy-MM" min="2013-01" max="2013-12" required />
+
+snippet nginput_number
+	<input type="${1:number}" name="${2:input}" ng-model="example.value"
+		min="${3:0}" max="${4:99}" required>
+
+snippet nginput_url
+	<input type="${1:url}" name="${2:input}" ng-model="url.text" required>
+
+snippet nginput_email
+	<input type="${1:email}" name="${2:input}" ng-model="email.text" required>
+
+snippet nginput_radio
+	<input type="${1:radio}"
+		ng-model="${2:my.favorite}"
+		ng-value="${3:name}"
+		id="{{name}}"
+		name="${4:favorite}">
+
+snippet nginput_checkbox
+	<input type="${1:checkbox}" ng-model="checkboxModel.value2"
+		ng-true-value="${1:'YES'}" ng-false-value="${2:'NO'}">
+
+snippet nginput_text
+	<input type="${1:text}" name="${2:lastName}" ng-model="user.last"
+		ng-minlength="${3:3}" ng-maxlength="${4:10}">
+
+snippet ngtemplate
+	<!doctype html>
+	<html ng-app>
+		<head>
+			<title>My Angular App</title>
+			<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+		</head>
+		<body>
+			${1:body}
+		</body>
+	</html>
+
+snippet ngapp "scaffolding for ng-app"
+	<html ng-app="app">
+		<head>
+			<meta charset="utf-8">
+			<title>Angular js</title>
+			<script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.1/angular.min.js"></script>
+			<script>
+				var app = angular.module('app', []);
+				app.controller('controller', function ($scope, $http){
+					${1} 
+				});
+			</script>
+		</head>
+		<body ng-controller="controller">
+		</body>
+	</html>
+
+snippet ngappts "ng app with table and search text field"
+	<html ng-app="app">
+		<head>
+			<meta charset="utf-8">
+			<title>Angular js</title>
+			<script src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.1/angular.min.js"></script>
+			<script>
+				var app = angular.module('app', []);
+				app.controller('controller', function ($scope, $http){
+					${1} 
+				});
+			</script>
+		</head>
+		<body ng-controller="controller">
+			Search:<input ng-model="query" type="text"/>
+			<table>
+				<thead>
+					<tr>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+						<tr ng-repeat="country in countries | filter:query">
+						<td></td>
+					</tr>
+				</tbody>
+			</table>
+		</body>
+	</html>
