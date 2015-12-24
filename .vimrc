@@ -318,9 +318,31 @@ imap <leader>l <ESC>:TagbarToggle<cr>i
 "imap <C-J> <Plug>snipMateNextOrTrigger
 "smap <C-J> <Plug>snipMateNextOrTrigger
 
+
 let g:UltiSnipsExpandTrigger = "<C-J>"
 let g:UltiSnipsJumpForwardTrigger = "<C-J>"
 let g:UltiSnipsJumpBackwardTrigger = "<C-K>"
 " =========== END Plugin Settings =========="
 "
 
+set nocompatible      " We're running Vim, not Vi!                                 
+syntax on             " Enable syntax highlighting                                 
+filetype on           " Enable filetype detection                                  
+filetype indent on    " Enable filetype-specific indenting                         
+filetype plugin on    " Enable filetype-specific plugins                           
+                                                                                   
+                                                                                   
+let g:ycm_enable_diagnostic_signs = 1                                              
+let g:ycm_enable_diagnostic_highlighting = 1                                       
+let g:ycm_echo_current_diagnostic = 1                                              
+let g:ycm_open_loclist_on_ycm_diags = 1                                            
+let g:ycm_allow_changing_updatetime = 1                                            
+                                                                                   
+let g:ycm_complete_in_comments = 1                                                 
+let g:ycm_complete_in_strings = 1                                                  
+let g:ycm_collect_identifiers_from_comments_and_strings = 1                        
+let g:ycm_collect_identifiers_from_tags_files = 1                                  
+let g:ycm_disable_for_files_larger_than_kb = 10000                                 
+
+
+let g:ycm_global_ycm_extra_conf = '/home/vagrant/.vim/bundle/YouCompleteMe/third_party/ycmd/cpp/ycm/.ycm_extra_conf.py'
