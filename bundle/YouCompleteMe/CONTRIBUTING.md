@@ -7,8 +7,9 @@ YCM to work on my machine" and the reason why is obviously related to your
 machine configuration and the problem would not be resolved with _reasonable_
 changes to the YCM codebase, then the issue is likely to be closed.
 
-**A good place to ask questions is the [ycm-users][] Google group**. Rule of
-thumb: if you're not sure whether your problem is a real bug, ask on the group.
+**A good place to ask questions is the [Gitter room][gitter] or the
+[ycm-users][] Google group**. Rule of thumb: if you're not sure whether your
+problem is a real bug, ask on the room or the group.
 
 **YCM compiles just fine**; [the build bots say so][build-bots]. If the bots are
 green and YCM doesn't compile on your machine, then _your machine is the root
@@ -32,7 +33,7 @@ You should also **search the archives of the [ycm-users][] mailing list**.
 
 Lastly, **make sure you are running the latest version of YCM**. The issue you
 have encountered may have already been fixed. **Don't forget to recompile
-ycm_core.so too** (usually by just running `install.sh` again).
+ycm_core.so too** (usually by just running `install.py` again).
 
 OK, so we've reached this far. You need to create an issue. First realize that
 the time it takes to fix your issue is a multiple of how long it takes the
@@ -44,26 +45,24 @@ Here are the things you should do when creating an issue:
 1. **Write a step-by-step procedure that when performed repeatedly reproduces
    your issue.** If we can't reproduce the issue, then we can't fix it. It's
    that simple.
-2. Put the following options in your vimrc:
-
+2. Add the output of [the `:YcmDebugInfo` command][ycm-debug-info-command].
+3. Put the following options in your vimrc:
    ```viml
-   let g:ycm_server_use_vim_stdout = 1
-   let g:ycm_server_log_level = 'debug'
+   let g:ycm_keep_logfiles = 1
+   let g:ycm_log_level = 'debug'
    ```
 
-   Then, if possible, start gvim/macvim (not console vim) from the console. 
-   As you use Vim, you'll see the `ycmd` debug output stream in the console. 
-   If you can not use gvim/macvim, run `:YcmDebugInfo` in vim to see what 
-   temporary files (listed under "Server logfiles") the debug output streams 
-   are written to. Attach the debug output stream to your issue.
-3. **Create a test case for your issue**. This is critical. Don't talk about how
+   Reproduce your issue and attach the contents of the logfiles. Use [the
+   `:YcmToggleLogs` command][ycm-toggle-logs-command] to directly open them in
+   Vim.
+4. **Create a test case for your issue**. This is critical. Don't talk about how
    "when I have X in my file" or similar, _create a file with X in it_ and put
    the contents inside code blocks in your issue description. Try to make this
    test file _as small as possible_. Don't just paste a huge, 500 line source
    file you were editing and present that as a test. _Minimize_ the file so that
    the problem is reproduced with the smallest possible amount of test data.
-4. **Include your OS and OS version.**
-5. **Include the output of `vim --version`.**
+5. **Include your OS and OS version.**
+6. **Include the output of `vim --version`.**
 
 
 Creating good pull requests
@@ -109,13 +108,9 @@ Creating good pull requests
     sometimes what you want can be done in a different way if the reason for the
     change is known. _What goal is your change trying to accomplish?_
 
-6.  **Sign the Google [Contributor License Agreement][cla]** (you can sign
-    online at the bottom of that page). You _must_ sign this form, otherwise we
-    cannot merge in your changes. **_Always_ mention in the pull request that
-    you've signed it**, even if you signed it for a previous pull request (you
-    only need to sign the CLA once).
-
 
 [build-bots]: https://travis-ci.org/Valloric/YouCompleteMe
 [ycm-users]: https://groups.google.com/forum/?hl=en#!forum/ycm-users
-[cla]: https://developers.google.com/open-source/cla/individual
+[gitter]: https://gitter.im/Valloric/YouCompleteMe
+[ycm-debug-info-command]: https://github.com/Valloric/YouCompleteMe#the-ycmdebuginfo-command
+[ycm-toggle-logs-command]: https://github.com/Valloric/YouCompleteMe#the-ycmtogglelogs-command

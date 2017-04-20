@@ -5,17 +5,17 @@ snippet ex
 	module.exports = ${1};
 # require
 snippet re
-	var ${1} = require('${2:module_name}');
+	${1:const} ${2} = require('${3:module_name}');
 # EventEmitter
 snippet on
 	on('${1:event_name}', function(${2:stream}) {
-		${3}
+	  ${3}
 	});
 snippet emit
 	emit('${1:event_name}', ${2:args});
 snippet once
 	once('${1:event_name}', function(${2:stream}) {
-		${3}
+	  ${3}
 	});
 # http. User js function snippet as handler
 snippet http
@@ -24,10 +24,10 @@ snippet http
 snippet net
 	net.createServer(function(${1:socket}){
 		${1}.on('data', function('data'){
-			${2}
+		  ${2}
 		]});
 		${1}.on('end', function(){
-			${3}
+		  ${3}
 		});
 	}).listen(${4:8124});
 # Stream snippets
@@ -49,45 +49,3 @@ snippet stdout
 	process.stdout
 snippet stderr
 	process.stderr
-
-snippet exs "setup express application frame work"
-	var express = require('express');
-	var app = express();
-
-	//to serve static files like html and css and js
-	app.use(express.static(__dirname + '/public')); 
-
-	app.get('${1:/data.json/:id}', function(req, res){
-		console.log("GET: "); 
-	}); 
-
-	// also app.post, app.delete, app.put  
-
-	/* istanbul ignore next */
-	if (!module.parent) {
-		app.listen(${2:8000}, ${3:0.0.0.0});
-		console.log('Express started on port ${2}');
-	}
-
-snippet exgp "setup express application frame work"
-	app.get('${1:/data.json/:id}', function(req, res){
-		console.log("GET: "); 
-	}); 
-
-	app.post('${1:/data.json/:id}', function(req, res){
-		console.log("GET: "); 
-	}); 
-snippet rf "read from a file one line at a time"
-	var fs = require('fs'), 
-		readline = require('readline'); 
-
-	var rd = readline.createInterface({
-		input: fs.createReadStream('${1:/path/to/the/file}'), 
-		output: process.stdout, 
-		terminal: false
-	}); 
-
-	rd.on('line', function(line){ 
-		console.log(line); 
-		${0}
-	}); 

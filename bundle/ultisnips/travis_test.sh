@@ -2,26 +2,38 @@
 
 set -ex
 
-VIM="${HOME}/bin/vim"
 PYTHON="python${TRAVIS_PYTHON_VERSION}"
 PYTHON_CMD="$(which ${PYTHON})"
 
-# This is needed so that vim finds the shared libraries it was build against -
-# they are not on the regular path.
-export LD_LIBRARY_PATH="$($PYTHON-config --prefix)/lib"
+if [[ $VIM_VERSION = "74" || $VIM_VERSION = "git" ]]; then
+   INTERFACE="--interface tmux"
+   VIM="${HOME}/bin/vim"
+   # This is needed so that vim finds the shared libraries it was build against -
+   # they are not on the regular path.
+   export LD_LIBRARY_PATH="$($PYTHON-config --prefix)/lib"
 
-if [[ $TRAVIS_PYTHON_VERSION =~ ^2\. ]]; then
-   PY_IN_VIM="py"
+elif [[ $VIM_VERSION == "NEOVIM" ]]; then
+   VIM="$(which nvim)"
+   if [[ $TRAVIS_PYTHON_VERSION =~ ^2\. ]]; then
+      INTERFACE="--interface tmux_nvim --python-host-prog=$PYTHON_CMD"
+   else
+      INTERFACE="--interface tmux_nvim --python3-host-prog=$PYTHON_CMD"
+   fi
 else
-   PY_IN_VIM="py3"
+   echo "Unknown VIM_VERSION: $VIM_VERSION"
+   exit 1
 fi
 
-echo "Using python from: $PYTHON_CMD Version: $($PYTHON_CMD --version 2>&1)"
+PYTHON_VERSION=$($PYTHON_CMD -c 'import sys;print(sys.version.split()[0])')
+echo "Using python from: $PYTHON_CMD Version: $PYTHON_VERSION"
 echo "Using vim from: $VIM. Version: $($VIMn)"
-
-printf "${PY_IN_VIM} import sys;print(sys.version);\nquit" | $VIM -e -V9myVimLog
-cat myVimLog
 
 tmux new -d -s vim
 
-$PYTHON_CMD ./test_all.py -v --plugins --session vim --vim $VIM
+$PYTHON_CMD ./test_all.py \
+   -v \
+   --plugins \
+   --session vim \
+   --vim $VIM \
+   $INTERFACE \
+   --expected-python-version $PYTHON_VERSION

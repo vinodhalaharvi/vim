@@ -1,0 +1,26 @@
+snippet array_in_chan_out
+	func gen(${1:items} ...${2:input type}) <-chan ${3:output type} {
+		out := make(chan $3)
+		go func() {
+			for _, n := range $1 {
+				out <- $4
+			}
+			close(out)
+		}()
+		return out
+	}
+	$0
+
+
+snippet chan_in_chan_out
+	func $1(in <-chan ${2:inputtype}) <-chan ${3:outputtype} {
+		out := make(chan $3)
+		go func() {
+			for n := range $2 {
+				out <- $4
+			}
+			close(out)
+		}()
+		return out
+	}
+	$0
