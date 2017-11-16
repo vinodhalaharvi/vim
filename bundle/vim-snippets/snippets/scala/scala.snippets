@@ -6,3 +6,17 @@ snippet tail-recursion
 		}
 		loop(a, 0)
 	}
+
+
+snippet pr
+	println($1)$0
+
+snippet objectfactory
+	object IdFactory {
+	  private var counter = 0
+	  def create(): Int = {
+		counter += 1
+		counter
+	  }
+	}
+

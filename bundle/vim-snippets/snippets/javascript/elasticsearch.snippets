@@ -1,0 +1,462 @@
+snippet client_bulk
+	  client.bulk({
+	    body: [
+	      // action description
+	      { index:  { _index: 'myindex', _type: 'mytype', _id: 1 } },
+	      // the document to index
+	      { title: 'foo' },
+	      // action description
+	      { update: { _index: 'myindex', _type: 'mytype', _id: 2 } },
+	      // the document to update
+	      { doc: { title: 'foo' } },
+	      // action description
+	      { delete: { _index: 'myindex', _type: 'mytype', _id: 3 } },
+	      // no document needed for this delete
+	    ]
+	  }, function (err, resp) {
+	    // ...
+	  });
+	
+snippet client_cluster_nodeHotThreads
+	  client.cluster.nodeHotThreads({
+	    threads: 10
+	    nodeId: 'mymisbehavingnode',
+	    maxRetries: 10
+	  }, function (error, response) {
+	    console.log(response);
+	  })
+	
+	
+snippet client_cluster_nodeInfo
+	  client.cluster.nodeInfo({ jvm: true })
+	    .then(function (response) {
+	      // enjoy your sweet info!
+	    }, function (error) {
+	      // scream!
+	    })
+	
+snippet client_count
+	  client.count({
+	    index: 'index_name',
+	    body: {
+	      query: {
+	        filtered: {
+	          filter: {
+	            terms: {
+	              foo: ['bar']
+	            }
+	          }
+	        }
+	      }
+	    }
+	  }, function (err, response) {
+	    // ...
+	  });
+	
+snippet client_create
+	  client.create({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1',
+	    body: {
+	      title: 'Test 1',
+	      tags: ['y', 'z'],
+	      published: true,
+	      published_at: '2013-01-01',
+	      counter: 1
+	    }
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_delete
+	  client.delete({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1'
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_deleteByQuery
+	  client.deleteByQuery({
+	    index: 'myindex',
+	    q: 'test'
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_deleteByQuery
+	  client.deleteByQuery({
+	    index: 'posts',
+	    body: {
+	      query: {
+	        term: { published: false }
+	      }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_exists
+	  client.exists({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: 1
+	  }, function (error, exists) {
+	    if (exists === true) {
+	      // ...
+	    } else {
+	      // ...
+	    }
+	  });
+	
+snippet client_explain
+	  client.explain({
+	    // the document to test
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1',
+	
+	    // the query to score it against
+	    q: 'field:value'
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_explain
+	  client.explain({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1',
+	    body: {
+	      query: {
+	        match: { title: 'test' }
+	      }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_get
+	  client.get({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: 1
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_index
+	  client.index({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1',
+	    body: {
+	      title: 'Test 1',
+	      tags: ['y', 'z'],
+	      published: true,
+	    }
+	  }, function (error, response) {
+	
+	  });
+
+snippet client_indices_updateAliases
+	  client.indices.updateAliases({
+	    body: {
+	      actions: [
+	        { remove: { index: 'logstash-2014.04', alias: 'logstash-current' } },
+	        { add:    { index: 'logstash-2014.05', alias: 'logstash-current' } }
+	      ]
+	    }
+	  }).then(function (response) {
+	    // ...
+	  }, errorHandler);
+	
+snippet client_mget
+	  client.mget({
+	    body: {
+	      docs: [
+	        { _index: 'indexA', _type: 'typeA', _id: '1' },
+	        { _index: 'indexB', _type: 'typeB', _id: '1' },
+	        { _index: 'indexC', _type: 'typeC', _id: '1' }
+	      ]
+	    }
+	  }, function(error, response){
+	    // ...
+	  });
+	
+snippet client_mget
+	  client.mget({
+	    index: 'myindex',
+	    type: 'mytype',
+	    body: {
+	      ids: [1, 2, 3]
+	    }
+	  }, function(error, response){
+	    // ...
+	  });
+	
+snippet client_mlt
+	  client.mlt({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: 1,
+	    mlt_fields: 'title'
+	  }, function (errors, response) {
+	    // ...
+	  });
+	
+snippet client_msearch
+	  client.msearch({
+	    body: [
+	      // match all query, on all indices and types
+	      {},
+	      { query: { match_all: {} } },
+	
+	      // query_string query, on index/mytype
+	      { index: 'myindex', type: 'mytype' },
+	      { query: { query_string: { query: '"Test 1"' } } }
+	    ]
+	  });
+	
+snippet client_index
+	  client.index({
+	    index: 'myindex',
+	    type: '.percolator',
+	    id: 'alert-1',
+	    body: {
+	      // This query will be run against documents sent to percolate
+	      query: {
+	        query_string: {
+	          query: 'foo'
+	        }
+	      }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+	client.index({
+	  index: 'myindex',
+	  type: '.percolator',
+	  id: 'alert-2',
+	  body: {
+	    // This query will also be run against documents sent to percolate
+	    query: {
+	      query_string: {
+	        query: 'bar'
+	      }
+	    }
+	  }
+	}, function (error, response) {
+	  // ...
+	});
+	
+snippet client_percolate
+	  client.percolate({
+	    index: 'myindex',
+	    type: 'mytype',
+	    body: {
+	      doc: {
+	        title: "Foo"
+	      }
+	    }
+	  }, function (error, response) {
+	    // response would equal
+	    // {
+	    //   total: 1,
+	    //   matches: [ { _index: 'myindex', _id: 'alert-1' } ]
+	    // }
+	  });
+	
+	client.percolate({
+	  index: 'myindex',
+	  type: 'mytype',
+	  body: {
+	    doc: {
+	      title: "Foo Bar"
+	    }
+	  }
+	}, function (error, response) {
+	  // response would equal
+	  // {
+	  //   total: 2,
+	  //   matches: [
+	  //     { _index: 'myindex', _id: 'alert-1' },
+	  //     { _index: 'myindex', _id: 'alert-2' }
+	  //   ]
+	  // }
+	});
+	
+snippet client_search
+	  var allTitles = [];
+	  // first we do a search, and specify a scroll timeout
+	  client.search({
+	    index: 'myindex',
+	    scroll: '30s', // keep the search results "scrollable" for 30 seconds
+	    source: ['title'], // filter the source to only include the title field
+	    q: 'title:test'
+	  }, function getMoreUntilDone(error, response) {
+	    // collect the title from each response
+	    response.hits.hits.forEach(function (hit) {
+	      allTitles.push(hit._source.title);
+	    });
+	
+	    if (response.hits.total > allTitles.length) {
+	      // ask elasticsearch for the next set of hits from this search
+	      client.scroll({
+	        scrollId: response._scroll_id,
+	        scroll: '30s'
+	      }, getMoreUntilDone);
+	    } else {
+	      console.log('every "test" title', allTitles);
+	    }
+	  });
+	
+snippet client_search
+	  var allTitles = [];
+	
+	  // first we do a search, and specify a scroll timeout
+	  client.search({
+	    index: 'myindex',
+	    // Set to 30 seconds because we are calling right back
+	    scroll: '30s',
+	    search_type: 'scan',
+	    fields: ['title'],
+	    q: 'title:test'
+	  }, function getMoreUntilDone(error, response) {
+	    // collect the title from each response
+	    response.hits.hits.forEach(function (hit) {
+	      allTitles.push(hit.fields.title);
+	    });
+	
+	    if (response.hits.total !== allTitles.length) {
+	      // now we can call scroll over and over
+	      client.scroll({
+	        scrollId: response._scroll_id,
+	        scroll: '30s'
+	      }, getMoreUntilDone);
+	    } else {
+	      console.log('every "test" title', allTitles);
+	    }
+	  });
+	
+snippet client_search
+	  client.search({
+	    index: 'myindex',
+	    q: 'title:test'
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_search
+	  client.search({
+	    index: 'myindex',
+	    body: {
+	      query: {
+	        match: {
+	          title: 'test'
+	        }
+	      },
+	      facets: {
+	        tags: {
+	          terms: {
+	            field: 'tags'
+	          }
+	        }
+	      }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_suggest
+	  client.suggest({
+	    index: 'myindex',
+	    body: {
+	      mysuggester: {
+	        text: 'tset',
+	        term: {
+	          field: 'title'
+	        }
+	      }
+	    }
+	  }, function (error, response) {
+	    // response will be formatted like so:
+	    //
+	    // {
+	    //   ...
+	    //   mysuggester: [
+	    //     {
+	    //       text: "tset",
+	    //       ...
+	    //       options: [
+	    //         {
+	    //           text: "test",
+	    //           score: 0.75,
+	    //           freq: 5
+	    //         }
+	    //       ]
+	    //     }
+	    //   ]
+	    // }
+	  });
+	
+snippet client_update
+	  client.update({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1',
+	    body: {
+	      // put the partial document under the key
+	      doc: {
+	        title: 'Updated'
+	      }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  })
+	
+snippet client_update
+	  client.update({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1',
+	    body: {
+	      script: 'ctx._source.tags += tag',
+	      params: { tag: 'some new tag' }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  });
+	
+snippet client_update
+	  client.update({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '777',
+	    body: {
+	      script: 'ctx._source.counter += 1',
+	      upsert: {
+	        counter: 1
+	      }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  })
+	
+snippet client_update
+	  client.update({
+	    index: 'myindex',
+	    type: 'mytype',
+	    id: '1',
+	    body: {
+	      script: 'ctx._source.tags.contains(tag) ? ctx.op = "delete" : ctx.op = "none"',
+	      params: {
+	        tag: 'to-delete'
+	      }
+	    }
+	  }, function (error, response) {
+	    // ...
+	  });

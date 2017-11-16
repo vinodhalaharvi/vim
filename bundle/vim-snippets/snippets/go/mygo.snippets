@@ -1,4 +1,196 @@
-snippet array_in_chan_out
+snippet findex
+	// Returns the first index of the target t, or
+	// -1 if no match is found.
+	func Index(vs []${1:string}, t $1) int {
+		for i, v := range vs {
+			if v == t {
+				return i
+			}
+		}
+		return -1
+	}
+
+	// returns int
+	Index(items, item)
+snippet finclude
+	// Returns true if the target t is in the
+	// slice.
+	func Include(vs []${1:string}, t $1) bool {
+		return Index(vs, t) >= 0
+	}
+
+	//return bool
+	Include(items, item)
+snippet fany
+	// Returns true if one of the items in the slice
+	// satisfies the predicate f.
+	func Any(vs []${1:string}, f func($1) bool) bool {
+		for _, v := range vs {
+			if f(v) {
+				return true
+			}
+		}
+		return false
+	}
+
+	//returns bool
+	Any(items, func(it $1) bool {
+	})
+snippet fall
+	// Returns true if all of the items in the slice
+	// satisfy the predicate f.
+	func All(vs []${1:string}, f func($1) bool) bool {
+		for _, v := range vs {
+			if !f(v) {
+				return false
+			}
+		}
+		return true
+	}
+	
+	//returns bool
+	All(items, func(it $1) bool {
+	})
+snippet ffilter
+	// Returns a new slice containing all items in the
+	// slice that satisfy the predicate f.
+	func Filter(vs []${1:string}, f func($1) bool) []$1 {
+		vsf := make([]$1, 0)
+		for _, v := range vs {
+			if f(v) {
+				vsf = append(vsf, v)
+			}
+		}
+		return vsf
+	}
+	//returns []$1
+	Filter(items, func(it $1) bool {
+	})
+snippet fmap
+	// Returns a new slice containing the results of applying
+	// the function f to each string in the original slice.
+	func Map(vs []${1:string}, f func($1) $1) []$1 {
+		vsm := make([]$1, len(vs))
+		for i, v := range vs {
+			vsm[i] = f(v)
+		}
+		return vsm
+	}
+
+	//returns []$1
+	Map(items, func(it $1) $1 {
+	})
+snippet functional_examples
+	func main() {
+		// Here we try out our various collection functions.
+		var strs = []string{"peach", "apple", "pear", "plum"}
+		fmt.Println(Index(strs, "pear"))
+		fmt.Println(Include(strs, "grape"))
+		fmt.Println(Any(strs, func(v string) bool {
+			return strings.HasPrefix(v, "p")
+		}))
+		fmt.Println(All(strs, func(v string) bool {
+			return strings.HasPrefix(v, "p")
+		}))
+		fmt.Println(Filter(strs, func(v string) bool {
+			return strings.Contains(v, "e")
+		}))
+		// The above examples all used anonymous functions,
+		// but you can also use named functions of the correct
+		// type.
+		fmt.Println(Map(strs, strings.ToUpper))
+	}
+snippet if_err_fatal
+	if err != nil {
+		log.Fatal(err)
+	}
+snippet fun_chan_return_chan
+	func ${1:name}(in <-chan ${2:type}) <-chan $2 {
+		out := make(chan $2)
+		go func() {
+			for n := range in {
+				// out <- n * n
+				// Apply transformation here
+			}
+			close(out)
+		}()
+		return out
+	}
+snippet fun_map_chan_return_chan
+	func ${1:name}(in <-chan ${2:type}, f func($2) ${3:output_type}) <-chan $3 {
+		out := make(chan $3)
+		go func() {
+			for n := range in {
+				out <- f(n)
+			}
+			close(out)
+		}()
+		return out
+	}
+
+	$1(in, func(it $2) $3 {
+		//return value of type $3
+	})
+
+
+snippet fun_done_chan_chan
+	func ${1:functionName}(done <-chan struct{}, 
+			readChan <-chan ${2:readChanType}, 
+			writeChan chan<- ${3:writeChanType}) {
+		for it := range readChan {
+			select {
+				case writeChan <- it: // do something with it
+				case <-done:
+					return
+			}
+		}
+	}
+
+snippet dispatcher
+	func ${1:Dispatcher}(done <-chan struct{}, 
+		inputChan <-chan ${2:inputChanType},
+		resultChan chan<- ${3:resultChanType}){
+		var wg sync.WaitGroup
+		const numWorkers = ${4:numOfWorkers}
+		wg.Add(numWorkers)
+		for i := 0; i < numWorkers; i++ {
+			go func() {
+				//SomeFunction(done, inputChan, resultChan)
+				wg.Done()
+			}()
+		}
+		go func() {
+			wg.Wait()
+			close(resultChan)
+		}()
+	}
+
+snippet json_encoder
+	c := struct{}{}
+	b, err := json.Marshal(&c)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+snippet json_decoder
+	type ${1:jsonRecordType} struct{ 
+		${2}
+	}
+	dec := json.NewDecoder(strings.NewReader(jsonStream))
+	for {
+		var m $1
+		if err := dec.Decode(&m); err == io.EOF {
+			break
+		} else if err != nil {
+			log.Fatal(err)
+		}
+		//do something with m
+
+	}
+
+
+# net related
+snippet array_to_chan
 	func gen(${1:items} ...${2:input type}) <-chan ${3:output type} {
 		out := make(chan $3)
 		go func() {
@@ -11,16 +203,460 @@ snippet array_in_chan_out
 	}
 	$0
 
+snippet gaw
+	var wg sync.WaitGroup
+	wg.Add(${1:count})
+	go func() {
+		defer wg.Done()
+		// do something here
+	}()
+	wg.Wait()
 
-snippet chan_in_chan_out
-	func $1(in <-chan ${2:inputtype}) <-chan ${3:outputtype} {
-		out := make(chan $3)
-		go func() {
-			for n := range $2 {
-				out <- $4
+
+snippet websocket_read_write
+	func ${1:functionName}(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Fatal("upgrade:", err)
+			return
+		}
+		defer c.Close()
+		for {
+			mt, message, err := c.ReadMessage()
+			if err != nil {
+				log.Fatal("read:", err)
+				break
 			}
-			close(out)
-		}()
-		return out
+			log.Fatal("recv: %s", message)
+			err = c.WriteMessage(mt, message)
+			if err != nil {
+				log.Fatal("write:", err)
+				break
+			}
+		}
 	}
-	$0
+
+snippet websocket_read
+	func ${1:functionName}(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Fatal("upgrade:", err)
+			return
+		}
+		defer c.Close()
+		for {
+			mt, message, err := c.ReadMessage()
+			if err != nil {
+				log.Fatal("read:", err)
+				break
+			}
+			log.Fatal("recv: %s", message)
+		}
+	}
+
+
+snippet websocket_write
+	func ${1:functionName}(w http.ResponseWriter, r *http.Request) {
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Fatal("upgrade:", err)
+			return
+		}
+		defer c.Close()
+		for {
+			err = c.WriteMessage(mt, message)
+			if err != nil {
+				log.Fatal("write:", err)
+				break
+			}
+		}
+	}
+
+snippet code_array_of_structs
+	as := []struct {
+		FirstName string
+		LastName  string
+	}{
+		{"First", "Last"},
+	}
+	for _, it := range as {
+		//process it
+	}
+
+
+snippet code_nested_structs
+	// nested struct definitions
+	type some struct {
+		s1      *some1
+		closeCh chan struct{}
+		doneCh  chan struct{}
+		others  []*other
+	}
+
+	type some1 struct {
+	}
+
+	type other struct {
+	}
+
+	func makeSome() *some {
+		return &some{
+			doneCh:  make(chan struct{}),
+			closeCh: make(chan struct{}),
+		}
+	}
+
+	func (b *some) makeSome1() {
+		b.s1 = &some1{}
+	}
+
+	func (b *some) makeOthers(numothers int) {
+		others := make([]*other, numothers)
+
+		for i := 0; i < numothers; i++ {
+			others[i] = &other{}
+		}
+		b.others = others
+	}
+
+	func (b *some) close() {
+		close(b.closeCh)
+	}
+
+	func (b *some) run() {
+		//do work in go routine and wait for done
+		<-b.doneCh
+	}
+
+	func main() {
+		b := makeSome()
+		b.makeSome1()
+		b.makeOthers(10)
+		fmt.Printf("%s\n", b)
+	}
+
+
+
+snippet code_key_value_datastore
+	// mini key value in memory database
+	package main
+
+	//CREDIT: https://hackernoon.com/dancing-with-go-s-mutexes-92407ae927bf
+	import (
+		"sync"
+	)
+
+	type DataStore struct {
+		sync.Mutex
+		cache map[string]string
+	}
+
+	func New() *DataStore {
+		return &DataStore{
+			cache: make(map[string]string),
+		}
+	}
+
+	func (ds *DataStore) set(key string, value string) {
+		ds.cache[key] = value
+	}
+
+	func (ds *DataStore) get(key string) string {
+		if ds.count() > 0 {
+			item := ds.cache[key]
+			return item
+		}
+		return ""
+	}
+
+	func (ds *DataStore) count() int {
+		return len(ds.cache)
+	}
+
+	func (ds *DataStore) Set(key string, value string) {
+		ds.Lock()
+		defer ds.Unlock()
+		ds.set(key, value)
+	}
+
+	func (ds *DataStore) Get(key string) string {
+		ds.Lock()
+		defer ds.Unlock()
+		return ds.get(key)
+	}
+
+	func (ds *DataStore) Count() int {
+		ds.Lock()
+		defer ds.Unlock()
+		return ds.count()
+	}
+
+	func main() {
+		store := New()
+		for i := 0; i < 10000000; i++ {
+			store.Set("Go", "Lang")
+			store.Get("Go")
+		}
+	}
+
+snippet code_websocket_server
+	//routes
+	type Route struct {
+		Name    string
+		Path    string
+		Handler http.Handler
+		Methods []string
+	}
+
+	var routes = []Route{
+		{
+			Name:    "HomeHandler",
+			Path:    "/",
+			Handler: new(HomeHandler),
+			Methods: []string{"GET", "POST"},
+		},
+		{
+			Name:    "WsHandler",
+			Path:    "/ws",
+			Handler: new(WsHandler),
+			Methods: []string{"GET", "POST"},
+		},
+	}
+
+	//helpers
+	func Logger(inner http.Handler, name string) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+
+			inner.ServeHTTP(w, r)
+
+			log.Printf(
+				"%s\t%s\t%s\t%s",
+				r.Method,
+				r.RequestURI,
+				name,
+				time.Since(start),
+			)
+		})
+	}
+
+	//handlers
+	//home handler
+	type HomeHandler struct{}
+
+	func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte("hello world out there !\n"))
+	}
+
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+
+	//web socket handler
+	type WsHandler struct{}
+
+	func (h *WsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+		// serveWs handles websocket requests from the peer.
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Printf("%s\n", conn)
+		//do something with conn here
+	}
+
+	//json handler
+	type JsonHandler struct{}
+
+	//your type goes in here
+	type JsonType struct{}
+
+	func (jh *JsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+		var jsonData JsonType
+		body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+		if err != nil {
+			panic(err)
+		}
+		if err := r.Body.Close(); err != nil {
+			panic(err)
+		}
+		if err := json.Unmarshal(body, &jsonData); err != nil {
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			w.WriteHeader(422) // unprocessable entity
+			if err := json.NewEncoder(w).Encode(err); err != nil {
+				panic(err)
+			}
+		}
+
+		//do something with jsonData
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusCreated)
+		/*
+			//optionally write back some json data
+			if err := json.NewEncoder(w).Encode(jsonData); err != nil {
+				log.Fatal(err)
+			}
+		*/
+	}
+
+	func main() {
+		var router = mux.NewRouter()
+		for _, route := range routes {
+			router.
+				Methods(route.Methods...).
+				Path(route.Path).
+				Name(route.Name).
+				Handler(Logger(route.Handler, route.Name))
+
+		}
+		fmt.Printf("%s\n", "Server listening on :8000")
+		log.Fatal(http.ListenAndServe(":8000", router))
+	}
+
+
+
+snippet code_web_socket_client
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+	<title>Chat Example</title>
+	<script type="text/javascript">
+	window.onload = function () {
+		var conn;
+		var msg = document.getElementById("msg");
+		var log = document.getElementById("log");
+
+		function appendLog(item) {
+			var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+			log.appendChild(item);
+			if (doScroll) {
+				log.scrollTop = log.scrollHeight - log.clientHeight;
+			}
+		}
+
+		document.getElementById("form").onsubmit = function () {
+			if (!conn) {
+				return false;
+			}
+			if (!msg.value) {
+				return false;
+			}
+			conn.send(msg.value);
+			msg.value = "";
+			return false;
+		};
+
+		if (window["WebSocket"]) {
+			conn = new WebSocket("ws://" + document.location.host + "/ws");
+			conn.onclose = function (evt) {
+				var item = document.createElement("div");
+				item.innerHTML = "<b>Connection closed.</b>";
+				appendLog(item);
+			};
+			conn.onmessage = function (evt) {
+				var messages = evt.data.split('\n');
+				for (var i = 0; i < messages.length; i++) {
+					var item = document.createElement("div");
+					item.innerText = messages[i];
+					appendLog(item);
+				}
+			};
+		} else {
+			var item = document.createElement("div");
+			item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+			appendLog(item);
+		}
+	};
+	</script>
+	<style type="text/css">
+	html {
+		overflow: hidden;
+	}
+
+	body {
+		overflow: hidden;
+		padding: 0;
+		margin: 0;
+		width: 100%;
+		height: 100%;
+		background: gray;
+	}
+
+	#log {
+		background: white;
+		margin: 0;
+		padding: 0.5em 0.5em 0.5em 0.5em;
+		position: absolute;
+		top: 0.5em;
+		left: 0.5em;
+		right: 0.5em;
+		bottom: 3em;
+		overflow: auto;
+	}
+
+	#form {
+		padding: 0 0.5em 0 0.5em;
+		margin: 0;
+		position: absolute;
+		bottom: 1em;
+		left: 0px;
+		width: 100%;
+		overflow: hidden;
+	}
+
+	</style>
+	</head>
+	<body>
+	<div id="log"></div>
+	<form id="form">
+		<input type="submit" value="Send" />
+		<input type="text" id="msg" size="64"/>
+	</form>
+	</body>
+	</html>
+
+
+snippet code_aws_service
+	type ${1:Kinesis} struct {
+		sess Session
+		svc  *$1
+	}
+
+	func new$1Service() {
+		sess := session.Must(session.NewSessionWithOptions(session.Options{
+			Config:  aws.Config{Region: aws.String("us-east-1")},
+			Profile: profileName,
+		}))
+		svc := ${2:kinesis}.New(sess, &aws.Config{Region: aws.String(awsRegion)})
+		return &$1{
+			sess: sess,
+			svc:  svc,
+		}
+	}
+
+	func main() {
+		this := new$1Service()
+	}
+
+snippet code_aws_service_resource_request
+	func (this *${1:Kinesis}) ${2:getRecords}() error {
+		params := &${3:kinesis}.${4:GetRecords}Input{
+		}
+		req, resp := this.svc.$4Request(params)
+		err := req.Send()
+		check(err)
+		return resp
+	}
+
+
+snippet code_aws_service_resource
+	func (this *${1:Kinesis}) ${2:method}() error {
+		params := &${3:kinesis}.${4:GetRecords}Input{
+		}
+		output, err := this.svc.$4(params)
+		check(err)
+		return output
+	}

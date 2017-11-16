@@ -729,3 +729,9 @@ snippet agg
 	aggregate_failures '${1:message}' do
 		${0}
 	end
+snippet template
+	%W{ 
+		$1
+	}.map {  |it|
+		$2
+	}
