@@ -24,6 +24,7 @@ Bundle 'slim-template/vim-slim'
 Plugin 'MarcWeber/vim-addon-mw-utils'
 Plugin 'tomtom/tlib_vim'
 "Plugin 'garbas/vim-snipmate'
+Plugin 'vim-git'
 Plugin 'Valloric/YouCompleteMe'
 Plugin 'SirVer/ultisnips'
 Plugin 'honza/vim-snippets'
@@ -33,6 +34,8 @@ Plugin 'jelera/vim-javascript-syntax'
 Plugin 'pangloss/vim-javascript'
 Plugin 'nathanaelkane/vim-indent-guides'
 Plugin 'Raimondi/delimitMate'
+Plugin 'hashivim/vim-terraform'
+Plugin 'fatih/vim-go'
 
 call vundle#end()            " required
 filetype plugin indent on    " required
@@ -262,8 +265,7 @@ endfunction
 
 " Removing scrollbars
 if has("gui_running")
-    set guitablabel=%-0.12t%M
-    set guioptions-=T
+    set guitablabel=%-0.12t%M set guioptions-=T
     set guioptions-=r
     set guioptions-=L
     set guioptions+=a
@@ -346,3 +348,48 @@ let g:ycm_disable_for_files_larger_than_kb = 10000
 
 
 let g:ycm_global_ycm_extra_conf = '~/.vim/bundle/YouCompleteMe/third_party/ycmd/cpp/ycm/.ycm_extra_conf.py'
+
+
+
+" vim-go options
+let g:go_fmt_command = "goimports"
+let g:go_highlight_functions = 1
+let g:go_highlight_methods = 1
+let g:go_highlight_structs = 1
+
+" YCM options after these other plugins (the defaults of vim-go changed somehow)
+set completeopt-=preview
+
+
+let g:tagbar_type_go = {
+	\ 'ctagstype' : 'go',
+	\ 'kinds'     : [
+		\ 'p:package',
+		\ 'i:imports:1',
+		\ 'c:constants',
+		\ 'v:variables',
+		\ 't:types',
+		\ 'n:interfaces',
+		\ 'w:fields',
+		\ 'e:embedded',
+		\ 'm:methods',
+		\ 'r:constructor',
+		\ 'f:functions'
+	\ ],
+	\ 'sro' : '.',
+	\ 'kind2scope' : {
+		\ 't' : 'ctype',
+		\ 'n' : 'ntype'
+	\ },
+	\ 'scope2kind' : {
+		\ 'ctype' : 't',
+		\ 'ntype' : 'n'
+	\ },
+	\ 'ctagsbin'  : 'gotags',
+	\ 'ctagsargs' : '-sort -silent'
+\ }
+
+
+let g:gitgutter_max_signs = 500  " default value 
+autocmd FileType make setlocal noexpandtab
+
