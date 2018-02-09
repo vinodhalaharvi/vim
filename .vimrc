@@ -7,6 +7,9 @@ call vundle#begin()
 " alternatively, pass a path where Vundle should install plugins
 "call vundle#begin('~/some/path/here')
 " All of your Plugins must be added before the following line
+Plugin 'rust-lang/rust.vim'
+Plugin 'vim-airline/vim-airline'
+Plugin 'vim-airline/vim-airline-themes'
 Bundle 'tpope/vim-sensible'
 Bundle 'tpope/vim-surround'
 Bundle 'tpope/vim-fugitive'
@@ -21,6 +24,7 @@ Bundle 'rking/ag.vim'
 Bundle 'kana/vim-textobj-user'
 Bundle 'nelstrom/vim-textobj-rubyblock'
 Bundle 'slim-template/vim-slim'
+
 Plugin 'MarcWeber/vim-addon-mw-utils'
 Plugin 'tomtom/tlib_vim'
 "Plugin 'garbas/vim-snipmate'
@@ -79,7 +83,7 @@ set backspace=indent,eol,start
 set laststatus=2
 
 "set relativenumber
-set number
+"set number
 set norelativenumber
 
 "set undofile
@@ -392,4 +396,13 @@ let g:tagbar_type_go = {
 
 let g:gitgutter_max_signs = 500  " default value 
 autocmd FileType make setlocal noexpandtab
+let g:airline#extensions#tabline#enabled = 1
+
+autocmd User Node if &filetype == "javascript" | setlocal expandtab | endif
+autocmd User Node
+  \ if &filetype == "javascript" |
+  \   nmap <buffer> <C-w>f <Plug>NodeVSplitGotoFile |
+  \   nmap <buffer> <C-w><C-f> <Plug>NodeVSplitGotoFile |
+  \ endif
+
 
