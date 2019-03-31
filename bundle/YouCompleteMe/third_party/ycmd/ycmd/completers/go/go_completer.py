@@ -1,4 +1,5 @@
 # Copyright (C) 2015 Google Inc.
+#               2017 ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -19,8 +20,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 import json
@@ -36,7 +36,7 @@ from ycmd.completers.completer import Completer
 
 BINARY_NOT_FOUND_MESSAGE = ( '{0} binary not found. Did you build it? '
                              'You can do so by running '
-                             '"./install.py --gocode-completer".' )
+                             '"./install.py --go-completer".' )
 SHELL_ERROR_MESSAGE = ( 'Command {command} failed with code {code} and error '
                         '"{error}".' )
 COMPUTE_OFFSET_ERROR_MESSAGE = ( 'Go completer could not compute byte offset '
@@ -48,14 +48,13 @@ GOCODE_NO_COMPLETIONS_MESSAGE = 'No completions found.'
 GOCODE_PANIC_MESSAGE = ( 'Gocode panicked trying to find completions, '
                          'you likely have a syntax error.' )
 
-DIR_OF_THIRD_PARTY = os.path.abspath(
-  os.path.join( os.path.dirname( __file__ ), '..', '..', '..', 'third_party' ) )
+GO_DIR = os.path.abspath(
+  os.path.join( os.path.dirname( __file__ ), '..', '..', '..', 'third_party',
+                'go', 'src', 'github.com' ) )
 GO_BINARIES = dict( {
-  'gocode': os.path.join( DIR_OF_THIRD_PARTY,
-                          'gocode',
+  'gocode': os.path.join( GO_DIR, 'mdempsky', 'gocode',
                           ExecutableName( 'gocode' ) ),
-  'godef': os.path.join( DIR_OF_THIRD_PARTY,
-                         'godef',
+  'godef': os.path.join( GO_DIR, 'rogpeppe', 'godef',
                          ExecutableName( 'godef' ) )
 } )
 
@@ -111,7 +110,7 @@ class GoCompleter( Completer ):
     self._gocode_lock = threading.RLock()
     self._gocode_handle = None
     self._gocode_port = None
-    self._gocode_address = None
+    self._gocode_host = None
     self._gocode_stderr = None
     self._gocode_stdout = None
 
@@ -141,7 +140,7 @@ class GoCompleter( Completer ):
 
     stdoutdata = self._ExecuteCommand( [ self._gocode_binary_path,
                                          '-sock', 'tcp',
-                                         '-addr', self._gocode_address,
+                                         '-addr', self._gocode_host,
                                          '-f=json', 'autocomplete',
                                          filename, str( offset ) ],
                                        contents = contents )
@@ -152,7 +151,7 @@ class GoCompleter( Completer ):
       _logger.error( GOCODE_PARSE_ERROR_MESSAGE )
       raise RuntimeError( GOCODE_PARSE_ERROR_MESSAGE )
 
-    if len( resultdata ) != 2:
+    if not isinstance( resultdata, list ) or len( resultdata ) != 2:
       _logger.error( GOCODE_NO_COMPLETIONS_MESSAGE )
       raise RuntimeError( GOCODE_NO_COMPLETIONS_MESSAGE )
     for result in resultdata[ 1 ]:
@@ -207,12 +206,12 @@ class GoCompleter( Completer ):
       _logger.info( 'Starting Gocode server' )
 
       self._gocode_port = utils.GetUnusedLocalhostPort()
-      self._gocode_address = '127.0.0.1:{0}'.format( self._gocode_port )
+      self._gocode_host = '127.0.0.1:{0}'.format( self._gocode_port )
 
       command = [ self._gocode_binary_path,
                   '-s',
                   '-sock', 'tcp',
-                  '-addr', self._gocode_address ]
+                  '-addr', self._gocode_host ]
 
       if _logger.isEnabledFor( logging.DEBUG ):
         command.append( '-debug' )
@@ -235,14 +234,14 @@ class GoCompleter( Completer ):
       if self._ServerIsRunning():
         _logger.info( 'Stopping Gocode server with PID {0}'.format(
                           self._gocode_handle.pid ) )
-        self._ExecuteCommand( [ self._gocode_binary_path,
-                                '-sock', 'tcp',
-                                '-addr', self._gocode_address,
-                                'close' ] )
         try:
+          self._ExecuteCommand( [ self._gocode_binary_path,
+                                  '-sock', 'tcp',
+                                  '-addr', self._gocode_host,
+                                  'close' ] )
           utils.WaitUntilProcessIsTerminated( self._gocode_handle, timeout = 5 )
           _logger.info( 'Gocode server stopped' )
-        except RuntimeError:
+        except Exception:
           _logger.exception( 'Error while stopping Gocode server' )
 
       self._CleanUp()
@@ -251,7 +250,7 @@ class GoCompleter( Completer ):
   def _CleanUp( self ):
     self._gocode_handle = None
     self._gocode_port = None
-    self._gocode_address = None
+    self._gocode_host = None
     if not self._keep_logfiles:
       if self._gocode_stdout:
         utils.RemoveIfExists( self._gocode_stdout )
@@ -312,62 +311,26 @@ class GoCompleter( Completer ):
 
 
   def ServerIsHealthy( self ):
-    """Check if the Gocode server is healthy (up and serving)."""
-    if not self._ServerIsRunning():
-      return False
-
-    try:
-      self._ExecuteCommand( [ self._gocode_binary_path,
-                              '-sock', 'tcp',
-                              '-addr', self._gocode_address,
-                              'status' ] )
-      return True
-    # We catch this exception type and not a more specific one because we
-    # raise it in _ExecuteCommand when the command fails.
-    except RuntimeError as error:
-      _logger.exception( error )
-      return False
-
-
-  def ServerIsReady( self ):
-    """Check if the Gocode server is ready. Same as the healthy status."""
-    return self.ServerIsHealthy()
+    """Assume the Gocode server is healthy if it's running."""
+    return self._ServerIsRunning()
 
 
   def DebugInfo( self, request_data ):
     with self._gocode_lock:
-      if self._ServerIsRunning():
-        return ( 'Go completer debug information:\n'
-                 '  Gocode running at: http://{0}\n'
-                 '  Gocode process ID: {1}\n'
-                 '  Gocode executable: {2}\n'
-                 '  Gocode logfiles:\n'
-                 '    {3}\n'
-                 '    {4}\n'
-                 '  Godef executable: {5}'.format( self._gocode_address,
-                                                   self._gocode_handle.pid,
-                                                   self._gocode_binary_path,
-                                                   self._gocode_stdout,
-                                                   self._gocode_stderr,
-                                                   self._godef_binary_path ) )
+      gocode_server = responses.DebugInfoServer(
+        name = 'Gocode',
+        handle = self._gocode_handle,
+        executable = self._gocode_binary_path,
+        address = '127.0.0.1',
+        port = self._gocode_port,
+        logfiles = [ self._gocode_stdout, self._gocode_stderr ] )
 
-      if self._gocode_stdout and self._gocode_stderr:
-        return ( 'Go completer debug information:\n'
-                 '  Gocode no longer running\n'
-                 '  Gocode executable: {0}\n'
-                 '  Gocode logfiles:\n'
-                 '    {1}\n'
-                 '    {2}\n'
-                 '  Godef executable: {3}'.format( self._gocode_binary_path,
-                                                   self._gocode_stdout,
-                                                   self._gocode_stderr,
-                                                   self._godef_binary_path ) )
+      godef_item = responses.DebugInfoItem( key = 'Godef executable',
+                                            value = self._godef_binary_path )
 
-      return ( 'Go completer debug information:\n'
-               '  Gocode is not running\n'
-               '  Gocode executable: {0}\n'
-               '  Godef executable: {1}'.format( self._gocode_binary_path,
-                                                 self._godef_binary_path ) )
+      return responses.BuildDebugInfoResponse( name = 'Go',
+                                               servers = [ gocode_server ],
+                                               items = [ godef_item ] )
 
 
 def _ComputeOffset( contents, line, column ):

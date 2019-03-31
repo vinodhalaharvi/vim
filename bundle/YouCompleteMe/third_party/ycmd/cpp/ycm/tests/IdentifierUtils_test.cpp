@@ -49,10 +49,49 @@ TEST( IdentifierUtilsTest, ExtractIdentifiersFromTagsFileWorks ) {
   expected[ "c" ][ ( root / "foo" / "zoo" ).string() ].push_back( "Floo::goo" );
   expected[ "c" ][ ( root / "foo" / "goo maa" ).string() ].push_back( "!goo" );
 
+  expected[ "fakelang" ][ ( root / "foo" ).string() ].push_back( "zoro" );
+
   expected[ "cs" ][ ( root / "m_oo" ).string() ].push_back( "#bleh" );
+
+  expected[ "foobar" ][ ( testfile_parent / "foo.bar" ).string() ]
+  .push_back( "API" );
+  expected[ "foobar" ][ ( testfile_parent / "foo.bar" ).string() ]
+  .push_back( "DELETE" );
 
   EXPECT_THAT( ExtractIdentifiersFromTagsFile( testfile ),
                ContainerEq( expected ) );
+}
+
+
+TEST( IdentifierUtilsTest, TagFileIsDirectory ) {
+  fs::path testfile = PathToTestFile( "directory.tags" );
+
+  EXPECT_THAT( ExtractIdentifiersFromTagsFile( testfile ),
+               ContainerEq( FiletypeIdentifierMap() ) );
+}
+
+
+TEST( IdentifierUtilsTest, TagFileIsEmpty ) {
+  fs::path testfile = PathToTestFile( "empty.tags" );
+
+  EXPECT_THAT( ExtractIdentifiersFromTagsFile( testfile ),
+               ContainerEq( FiletypeIdentifierMap() ) );
+}
+
+
+TEST( IdentifierUtilsTest, TagLanguageMissing ) {
+  fs::path testfile = PathToTestFile( "invalid_tag_file_format.tags" );
+
+  EXPECT_THAT( ExtractIdentifiersFromTagsFile( testfile ),
+               ContainerEq( FiletypeIdentifierMap() ) );
+}
+
+
+TEST( IdentifierUtilsTest, TagFileInvalidPath ) {
+  fs::path testfile = PathToTestFile( "invalid_path_to_tag_file.tags" );
+
+  EXPECT_THAT( ExtractIdentifiersFromTagsFile( testfile ),
+               ContainerEq( FiletypeIdentifierMap() ) );
 }
 
 } // namespace YouCompleteMe

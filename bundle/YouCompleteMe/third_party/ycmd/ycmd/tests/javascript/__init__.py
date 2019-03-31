@@ -1,4 +1,4 @@
-# Copyright (C) 2016 ycmd contributors
+# Copyright (C) 2018 ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -19,23 +19,18 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
+from mock import patch
 import functools
 import os
 
-from ycmd import handlers
-from ycmd.tests.test_utils import ( ClearCompletionsCache,
-                                    CurrentWorkingDirectory,
-                                    SetUpApp,
-                                    StopCompleterServer,
+from ycmd.tests.test_utils import ( ClearCompletionsCache, IsolatedApp,
+                                    SetUpApp, StopCompleterServer,
                                     WaitUntilCompleterServerReady )
-from ycmd.utils import GetCurrentDirectory
 
 shared_app = None
-shared_current_dir = None
 
 
 def PathToTestFile( *args ):
@@ -48,21 +43,18 @@ def setUpPackage():
   by all tests using the SharedYcmd decorator in this package. Additional
   configuration that is common to these tests, like starting a semantic
   subserver, should be done here."""
-  global shared_app, shared_current_dir
+  global shared_app
 
-  shared_app = SetUpApp()
-  shared_current_dir = GetCurrentDirectory()
-  os.chdir( PathToTestFile() )
-  WaitUntilCompleterServerReady( shared_app, 'javascript' )
+  with patch( 'ycmd.completers.javascript.tern_completer.'
+              'ShouldEnableTernCompleter', return_value = False ):
+    shared_app = SetUpApp()
+    WaitUntilCompleterServerReady( shared_app, 'javascript' )
 
 
 def tearDownPackage():
-  """Cleans up the tests using the SharedYcmd decorator in this package. It is
-  executed once after running all the tests in the package."""
-  global shared_app, shared_current_dir
+  global shared_app
 
   StopCompleterServer( shared_app, 'javascript' )
-  os.chdir( shared_current_dir )
 
 
 def SharedYcmd( test ):
@@ -89,12 +81,9 @@ def IsolatedYcmd( test ):
   Do NOT attach it to test generators but directly to the yielded tests."""
   @functools.wraps( test )
   def Wrapper( *args, **kwargs ):
-    old_server_state = handlers._server_state
-    app = SetUpApp()
-    try:
-      with CurrentWorkingDirectory( PathToTestFile() ):
+    with IsolatedApp() as app:
+      try:
         test( app, *args, **kwargs )
-    finally:
-      StopCompleterServer( app, 'javascript' )
-      handlers._server_state = old_server_state
+      finally:
+        StopCompleterServer( app, 'javascript' )
   return Wrapper

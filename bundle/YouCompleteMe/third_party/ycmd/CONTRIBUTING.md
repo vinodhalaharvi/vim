@@ -94,15 +94,11 @@ Creating good pull requests
     sometimes what you want can be done in a different way if the reason for the
     change is known. _What goal is your change trying to accomplish?_
 
-You should also use our [Vagrant config when working on ycmd][dev-setup].
-There's _tons_ of gotchas when setting up the correct environment and they've
-all been worked out for you with Vagrant. Save yourself the trouble and use it.
-
 
 Writing code that runs on Python 2 & 3
 ======================================
 
-We support Python 2.6, 2.7 and 3.3+. Since we use
+We support Python 2.7 and 3.4+. Since we use
 [`python-future`][python-future], you should mostly write Python 3 as normal.
 Here's what you should watch out for:
 
@@ -113,8 +109,7 @@ Here's what you should watch out for:
     from __future__ import unicode_literals
     from __future__ import print_function
     from __future__ import division
-    from future import standard_library
-    standard_library.install_aliases()
+    # Not installing aliases from python-future; it's unreliable and slow.
     from builtins import *  # noqa
     ```
 
@@ -147,10 +142,15 @@ Here's what you should watch out for:
 - If you run tests and get failures on importing ycm_core that mention
   `initycm_core` or `PyInit_ycm_core`, you've built the C++ parts of ycmd for
   py2 and are trying to run tests in py3 (or vice-versa). Rebuild!
+- Import the `urljoin` and `urlparse` functions from `ycmd/utils.py`:
+
+    ```python
+    from ycmd.utils import urljoin, urlparse
+    ```
+
 
 [build-bots]: https://travis-ci.org/Valloric/ycmd
 [ycmd-users]: https://groups.google.com/forum/?hl=en#!forum/ycmd-users
 [ycmd-tests]: https://github.com/Valloric/ycmd/blob/master/TESTS.md
-[dev-setup]: https://github.com/Valloric/ycmd/blob/master/DEV_SETUP.md
 [python-future]: http://python-future.org/index.html
 [what-else]: http://python-future.org/what_else.html

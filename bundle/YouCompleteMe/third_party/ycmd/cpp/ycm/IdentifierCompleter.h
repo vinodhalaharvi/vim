@@ -18,13 +18,7 @@
 #ifndef COMPLETER_H_7AR4UGXE
 #define COMPLETER_H_7AR4UGXE
 
-#include "DLLDefines.h"
 #include "IdentifierDatabase.h"
-
-#include <boost/utility.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/scoped_ptr.hpp>
 
 #include <vector>
 #include <string>
@@ -35,12 +29,17 @@ namespace YouCompleteMe {
 class Candidate;
 
 
-class IdentifierCompleter : boost::noncopyable {
+class IdentifierCompleter {
 public:
-  YCM_DLL_EXPORT IdentifierCompleter();
-  YCM_DLL_EXPORT IdentifierCompleter(
+
+  IdentifierCompleter( const IdentifierCompleter& ) = delete;
+  IdentifierCompleter& operator=( const IdentifierCompleter& ) = delete;
+
+  YCM_EXPORT IdentifierCompleter() = default;
+  YCM_EXPORT IdentifierCompleter(
     const std::vector< std::string > &candidates );
-  IdentifierCompleter( const std::vector< std::string > &candidates,
+  YCM_EXPORT IdentifierCompleter(
+                       const std::vector< std::string > &candidates,
                        const std::string &filetype,
                        const std::string &filepath );
 
@@ -56,7 +55,7 @@ public:
     const std::string &filetype,
     const std::string &filepath );
 
-  YCM_DLL_EXPORT void AddIdentifiersToDatabaseFromTagFiles(
+  YCM_EXPORT void AddIdentifiersToDatabaseFromTagFiles(
     const std::vector< std::string > &absolute_paths_to_tag_files );
 
   void AddIdentifiersToDatabaseFromBuffer(
@@ -66,12 +65,14 @@ public:
     bool collect_from_comments_and_strings );
 
   // Only provided for tests!
-  YCM_DLL_EXPORT std::vector< std::string > CandidatesForQuery(
-    const std::string &query ) const;
-
-  YCM_DLL_EXPORT std::vector< std::string > CandidatesForQueryAndType(
+  YCM_EXPORT std::vector< std::string > CandidatesForQuery(
     const std::string &query,
-    const std::string &filetype ) const;
+    const size_t max_candidates = 0 ) const;
+
+  YCM_EXPORT std::vector< std::string > CandidatesForQueryAndType(
+    const std::string &query,
+    const std::string &filetype,
+    const size_t max_candidates = 0 ) const;
 
 private:
 

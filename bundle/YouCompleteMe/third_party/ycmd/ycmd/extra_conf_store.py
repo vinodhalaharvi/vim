@@ -1,4 +1,5 @@
-# Copyright (C) 2011, 2012 Google Inc.
+# Copyright (C) 2011-2012 Google Inc.
+#               2016      ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -21,8 +22,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 import os
@@ -33,15 +33,27 @@ import logging
 from threading import Lock
 from ycmd import user_options_store
 from ycmd.responses import UnknownExtraConf, YCM_EXTRA_CONF_FILENAME
-from ycmd.utils import LoadPythonSource, PathsToAllParentFolders
+from ycmd.utils import ( ExpandVariablesInPath, LoadPythonSource,
+                         PathsToAllParentFolders )
 from fnmatch import fnmatch
 
+
+_logger = logging.getLogger( __name__ )
 
 # Singleton variables
 _module_for_module_file = {}
 _module_for_module_file_lock = Lock()
 _module_file_for_source_file = {}
 _module_file_for_source_file_lock = Lock()
+
+
+def Get():
+  return _module_for_module_file, _module_file_for_source_file
+
+
+def Set( state ):
+  global _module_for_module_file, _module_file_for_source_file
+  _module_for_module_file, _module_file_for_source_file = state
 
 
 def Reset():
@@ -81,22 +93,34 @@ def Shutdown():
 
 
 def _CallGlobalExtraConfMethod( function_name ):
-  logger = _Logger()
   global_ycm_extra_conf = _GlobalYcmExtraConfFileLocation()
   if not ( global_ycm_extra_conf and
            os.path.exists( global_ycm_extra_conf ) ):
-    logger.debug( 'No global extra conf, not calling method ' + function_name )
+    _logger.debug( 'No global extra conf, '
+                   'not calling method {0}'.format( function_name ) )
     return
 
-  module = Load( global_ycm_extra_conf, force = True )
+  try:
+    module = Load( global_ycm_extra_conf, force = True )
+  except Exception:
+    _logger.exception( 'Error occurred while loading '
+                       'global extra conf {0}'.format( global_ycm_extra_conf ) )
+    return
+
   if not module or not hasattr( module, function_name ):
-    logger.debug( 'Global extra conf not loaded or no function ' +
-                  function_name )
+    _logger.debug( 'Global extra conf not loaded or no function ' +
+                   function_name )
     return
 
-  logger.info( 'Calling global extra conf method {0} on conf file {1}'.format(
-      function_name, global_ycm_extra_conf ) )
-  getattr( module, function_name )()
+  try:
+    _logger.info(
+      'Calling global extra conf method {0} '
+      'on conf file {1}'.format( function_name, global_ycm_extra_conf ) )
+    getattr( module, function_name )()
+  except Exception:
+    _logger.exception(
+      'Error occurred while calling global extra conf method {0} '
+      'on conf file {1}'.format( function_name, global_ycm_extra_conf ) )
 
 
 def Disable( module_file ):
@@ -105,19 +129,18 @@ def Disable( module_file ):
     _module_for_module_file[ module_file ] = None
 
 
-def _ShouldLoad( module_file ):
+def _ShouldLoad( module_file, is_global ):
   """Checks if a module is safe to be loaded. By default this will try to
   decide using a white-/blacklist and ask the user for confirmation as a
   fallback."""
 
-  if ( module_file == _GlobalYcmExtraConfFileLocation() or
-       not user_options_store.Value( 'confirm_extra_conf' ) ):
+  if is_global or not user_options_store.Value( 'confirm_extra_conf' ):
     return True
 
   globlist = user_options_store.Value( 'extra_conf_globlist' )
   for glob in globlist:
-    is_blacklisted = glob[0] == '!'
-    if _MatchesGlobPattern( module_file, glob.lstrip('!') ):
+    is_blacklisted = glob[ 0 ] == '!'
+    if _MatchesGlobPattern( module_file, glob.lstrip( '!' ) ):
       return not is_blacklisted
 
   raise UnknownExtraConf( module_file )
@@ -132,14 +155,14 @@ def Load( module_file, force = False ):
   if not module_file:
     return None
 
-  if not force:
-    with _module_for_module_file_lock:
-      if module_file in _module_for_module_file:
-        return _module_for_module_file[ module_file ]
+  with _module_for_module_file_lock:
+    if module_file in _module_for_module_file:
+      return _module_for_module_file[ module_file ]
 
-    if not _ShouldLoad( module_file ):
-      Disable( module_file )
-      return None
+  is_global = module_file == _GlobalYcmExtraConfFileLocation()
+  if not force and not _ShouldLoad( module_file, is_global ):
+    Disable( module_file )
+    return None
 
   # This has to be here because a long time ago, the ycm_extra_conf.py files
   # used to import clang_helpers.py from the cpp folder. This is not needed
@@ -158,6 +181,7 @@ def Load( module_file, force = False ):
   sys.dont_write_bytecode = True
   try:
     module = LoadPythonSource( _RandomName(), module_file )
+    module.is_global_ycm_extra_conf = is_global
   finally:
     sys.dont_write_bytecode = old_dont_write_bytecode
 
@@ -169,12 +193,15 @@ def Load( module_file, force = False ):
 
 
 def _MatchesGlobPattern( filename, glob ):
-  """Returns true if a filename matches a given pattern. A '~' in glob will be
-  expanded to the home directory and checking will be performed using absolute
-  paths. See the documentation of fnmatch for the supported patterns."""
+  """Returns true if a filename matches a given pattern. Environment variables
+  and a '~' in glob will be expanded and checking will be performed using
+  absolute paths with symlinks resolved (except on Windows). See the
+  documentation of fnmatch for the supported patterns."""
 
-  abspath = os.path.abspath( filename )
-  return fnmatch( abspath, os.path.abspath( os.path.expanduser( glob ) ) )
+  # NOTE: os.path.realpath does not resolve symlinks on Windows.
+  # See https://bugs.python.org/issue9949
+  realpath = os.path.realpath( filename )
+  return fnmatch( realpath, os.path.realpath( ExpandVariablesInPath( glob ) ) )
 
 
 def _ExtraConfModuleSourceFilesForFile( filename ):
@@ -208,9 +235,5 @@ def _RandomName():
 
 
 def _GlobalYcmExtraConfFileLocation():
-  return os.path.expanduser(
+  return ExpandVariablesInPath(
     user_options_store.Value( 'global_ycm_extra_conf' ) )
-
-
-def _Logger():
-  return logging.getLogger( __name__ )

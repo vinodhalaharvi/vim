@@ -19,16 +19,14 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 import functools
 import os
 
-from ycmd import handlers
-from ycmd.tests.test_utils import ( ClearCompletionsCache, SetUpApp,
-                                    StopCompleterServer,
+from ycmd.tests.test_utils import ( ClearCompletionsCache, IsolatedApp,
+                                    SetUpApp, StopCompleterServer,
                                     WaitUntilCompleterServerReady )
 
 shared_app = None
@@ -80,11 +78,9 @@ def IsolatedYcmd( test ):
   Do NOT attach it to test generators but directly to the yielded tests."""
   @functools.wraps( test )
   def Wrapper( *args, **kwargs ):
-    old_server_state = handlers._server_state
-    app = SetUpApp()
-    try:
-      test( app, *args, **kwargs )
-    finally:
-      StopCompleterServer( app, 'go' )
-      handlers._server_state = old_server_state
+    with IsolatedApp() as app:
+      try:
+        test( app, *args, **kwargs )
+      finally:
+        StopCompleterServer( app, 'go' )
   return Wrapper

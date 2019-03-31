@@ -1,4 +1,4 @@
-// Copyright (C) 2011, 2012 Google Inc.
+// Copyright (C) 2011-2018 ycmd contributors
 //
 // This file is part of ycmd.
 //
@@ -18,13 +18,11 @@
 #ifndef COMPLETIONDATA_H_2JCTF1NU
 #define COMPLETIONDATA_H_2JCTF1NU
 
-#include "standard.h"
-#include <string>
-#include <clang-c/Index.h>
+#include "FixIt.h"
 
 namespace YouCompleteMe {
 
-enum CompletionKind {
+enum class CompletionKind {
   STRUCT = 0,
   CLASS,
   ENUM,
@@ -51,8 +49,11 @@ enum CompletionKind {
 // The user can also enable a "preview" window that will show extra information
 // about a completion at the top of the buffer.
 struct CompletionData {
-  CompletionData() {}
-  CompletionData( const CXCompletionResult &completion_result );
+  CompletionData() = default;
+  CompletionData( CXCompletionString completion_string,
+                  CXCursorKind kind,
+                  CXCodeCompleteResults *results,
+                  size_t index );
 
   // What should actually be inserted into the buffer. For a function like
   // "int foo(int x)", this is just "foo". Same for a data member like "foo_":
@@ -88,15 +89,6 @@ struct CompletionData {
     return doc_string_;
   }
 
-  bool operator== ( const CompletionData &other ) const {
-    return
-      kind_ == other.kind_ &&
-      everything_except_return_type_ == other.everything_except_return_type_ &&
-      return_type_ == other.return_type_ &&
-      original_string_ == other.original_string_;
-    // detailed_info_ doesn't matter
-  }
-
   std::string detailed_info_;
 
   std::string return_type_;
@@ -113,13 +105,17 @@ struct CompletionData {
 
   std::string doc_string_;
 
+  FixIt fixit_;
+
 private:
 
   void ExtractDataFromChunk( CXCompletionString completion_string,
-                             uint chunk_num,
+                             size_t chunk_num,
                              bool &saw_left_paren,
                              bool &saw_function_params,
                              bool &saw_placeholder );
+
+  void BuildCompletionFixIt( CXCodeCompleteResults *results, size_t index );
 };
 
 } // namespace YouCompleteMe

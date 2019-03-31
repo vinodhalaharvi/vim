@@ -3,6 +3,7 @@
 import os
 import subprocess
 import os.path as p
+import glob
 import sys
 
 DIR_OF_THIS_SCRIPT = p.dirname( p.abspath( __file__ ) )
@@ -37,10 +38,13 @@ import argparse
 
 def RunFlake8():
   print( 'Running flake8' )
-  subprocess.check_call( [
-    'flake8',
-    p.join( DIR_OF_THIS_SCRIPT, 'python' )
-  ] )
+  args = [ sys.executable,
+           '-m',
+           'flake8',
+           p.join( DIR_OF_THIS_SCRIPT, 'python' ) ]
+  root_dir_scripts = glob.glob( p.join( DIR_OF_THIS_SCRIPT, '*.py' ) )
+  args.extend( root_dir_scripts )
+  subprocess.check_call( args )
 
 
 def ParseArguments():
@@ -84,7 +88,7 @@ def NoseTests( parsed_args, extra_nosetests_args ):
   else:
     nosetests_args.append( p.join( DIR_OF_THIS_SCRIPT, 'python' ) )
 
-  subprocess.check_call( [ 'nosetests' ] + nosetests_args )
+  subprocess.check_call( [ sys.executable, '-m', 'nose' ] + nosetests_args )
 
 
 def Main():
@@ -93,6 +97,7 @@ def Main():
     RunFlake8()
   BuildYcmdLibs( parsed_args )
   NoseTests( parsed_args, nosetests_args )
+
 
 if __name__ == "__main__":
   Main()

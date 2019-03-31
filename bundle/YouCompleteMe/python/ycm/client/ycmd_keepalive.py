@@ -19,8 +19,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 import time
@@ -46,9 +45,4 @@ class YcmdKeepalive( object ):
     while True:
       time.sleep( self._ping_interval_seconds )
 
-      # We don't care if there's an intermittent problem in contacting the
-      # server; it's fine to just skip this ping.
-      try:
-        BaseRequest.GetDataFromHandler( 'healthy' )
-      except:
-        pass
+      BaseRequest().GetDataFromHandler( 'healthy', display_message = False )

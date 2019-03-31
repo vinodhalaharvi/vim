@@ -17,12 +17,10 @@
 
 #include "IdentifierUtils.h"
 #include "Utils.h"
-#include "standard.h"
 
-#include <boost/unordered_map.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/regex.hpp>
 #include <boost/algorithm/string/regex.hpp>
+#include <boost/regex.hpp>
+#include <unordered_map>
 
 namespace YouCompleteMe {
 
@@ -55,59 +53,112 @@ struct StringEqualityComparer :
   }
 };
 
-// List of languages Exuberant Ctags supports:
+// List of languages Universal Ctags supports:
 //   ctags --list-languages
 // To map a language name to a filetype, see this file:
 //   :e $VIMRUNTIME/filetype.vim
 // This is a map of const char* and not std::string to prevent issues with
 // static initialization.
-const boost::unordered_map < const char *,
+const std::unordered_map < const char *,
       const char *,
-      boost::hash< std::string >,
-      StringEqualityComparer > LANG_TO_FILETYPE =
-        boost::assign::map_list_of
-        ( "Ant"        , "ant"        )
-        ( "Asm"        , "asm"        )
-        ( "Awk"        , "awk"        )
-        ( "Basic"      , "basic"      )
-        ( "C++"        , "cpp"        )
-        ( "C#"         , "cs"         )
-        ( "C"          , "c"          )
-        ( "COBOL"      , "cobol"      )
-        ( "DosBatch"   , "dosbatch"   )
-        ( "Eiffel"     , "eiffel"     )
-        ( "Elixir"     , "elixir"     )
-        ( "Erlang"     , "erlang"     )
-        ( "Fortran"    , "fortran"    )
-        ( "Go"         , "go"         )
-        ( "HTML"       , "html"       )
-        ( "Java"       , "java"       )
-        ( "JavaScript" , "javascript" )
-        ( "Lisp"       , "lisp"       )
-        ( "Lua"        , "lua"        )
-        ( "Make"       , "make"       )
-        ( "MatLab"     , "matlab"     )
-        ( "OCaml"      , "ocaml"      )
-        ( "Pascal"     , "pascal"     )
-        ( "Perl"       , "perl"       )
-        ( "PHP"        , "php"        )
-        ( "Python"     , "python"     )
-        ( "REXX"       , "rexx"       )
-        ( "Ruby"       , "ruby"       )
-        ( "Scheme"     , "scheme"     )
-        ( "Sh"         , "sh"         )
-        ( "SLang"      , "slang"      )
-        ( "SML"        , "sml"        )
-        ( "SQL"        , "sql"        )
-        ( "Tcl"        , "tcl"        )
-        ( "Tex"        , "tex"        )
-        ( "Vera"       , "vera"       )
-        ( "Verilog"    , "verilog"    )
-        ( "VHDL"       , "vhdl"       )
-        ( "Vim"        , "vim"        )
-        ( "YACC"       , "yacc"       );
-
-const char *const NOT_FOUND = "YCMFOOBAR_NOT_FOUND";
+      std::hash< std::string >,
+      StringEqualityComparer > LANG_TO_FILETYPE = {
+        { "Ada"                 , "ada"                 },
+        { "AnsiblePlaybook"     , "ansibleplaybook"     },
+        { "Ant"                 , "ant"                 },
+        { "Asm"                 , "asm"                 },
+        { "Asp"                 , "asp"                 },
+        { "Autoconf"            , "autoconf"            },
+        { "Automake"            , "automake"            },
+        { "Awk"                 , "awk"                 },
+        { "Basic"               , "basic"               },
+        { "BETA"                , "beta"                },
+        { "C"                   , "c"                   },
+        { "C#"                  , "cs"                  },
+        { "C++"                 , "cpp"                 },
+        { "Clojure"             , "clojure"             },
+        { "Cobol"               , "cobol"               },
+        { "CPreProcessor"       , "cpreprocessor"       },
+        { "CSS"                 , "css"                 },
+        { "ctags"               , "ctags"               },
+        { "CUDA"                , "cuda"                },
+        { "D"                   , "d"                   },
+        { "DBusIntrospect"      , "dbusintrospect"      },
+        { "Diff"                , "diff"                },
+        { "DosBatch"            , "dosbatch"            },
+        { "DTD"                 , "dtd"                 },
+        { "DTS"                 , "dts"                 },
+        { "Eiffel"              , "eiffel"              },
+        { "elm"                 , "elm"                 },
+        { "Erlang"              , "erlang"              },
+        { "Falcon"              , "falcon"              },
+        { "Flex"                , "flex"                },
+        { "Fortran"             , "fortran"             },
+        { "gdbinit"             , "gdb"                 },
+        { "Glade"               , "glade"               },
+        { "Go"                  , "go"                  },
+        { "HTML"                , "html"                },
+        { "Iniconf"             , "iniconf"             },
+        { "ITcl"                , "itcl"                },
+        { "Java"                , "java"                },
+        { "JavaProperties"      , "jproperties"         },
+        { "JavaScript"          , "javascript"          },
+        { "JSON"                , "json"                },
+        { "LdScript"            , "ldscript"            },
+        { "Lisp"                , "lisp"                },
+        { "Lua"                 , "lua"                 },
+        { "M4"                  , "m4"                  },
+        { "Make"                , "make"                },
+        { "man"                 , "man"                 },
+        { "MatLab"              , "matlab"              },
+        { "Maven2"              , "maven2"              },
+        { "Myrddin"             , "myrddin"             },
+        { "ObjectiveC"          , "objc"                },
+        { "OCaml"               , "ocaml"               },
+        { "Pascal"              , "pascal"              },
+        { "passwd"              , "passwd"              },
+        { "Perl"                , "perl"                },
+        { "Perl6"               , "perl6"               },
+        { "PHP"                 , "php"                 },
+        { "PlistXML"            , "plistxml"            },
+        { "pod"                 , "pod"                 },
+        { "Protobuf"            , "protobuf"            },
+        { "PuppetManifest"      , "puppet"              },
+        { "Python"              , "python"              },
+        { "PythonLoggingConfig" , "pythonloggingconfig" },
+        { "QemuHX"              , "qemuhx"              },
+        { "R"                   , "r"                   },
+        { "RelaxNG"             , "rng"                 },
+        { "reStructuredText"    , "rst"                 },
+        { "REXX"                , "rexx"                },
+        { "Robot"               , "robot"               },
+        { "RpmSpec"             , "spec"                },
+        { "RSpec"               , "rspec"               },
+        { "Ruby"                , "ruby"                },
+        { "Rust"                , "rust"                },
+        { "Scheme"              , "scheme"              },
+        { "Sh"                  , "sh"                  },
+        { "SLang"               , "slang"               },
+        { "SML"                 , "sml"                 },
+        { "SQL"                 , "sql"                 },
+        { "SVG"                 , "svg"                 },
+        { "SystemdUnit"         , "systemd"             },
+        { "SystemVerilog"       , "systemverilog"       },
+        { "Tcl"                 , "tcl"                 },
+        { "TclOO"               , "tcloo"               },
+        { "Tex"                 , "tex"                 },
+        { "TTCN"                , "ttcn"                },
+        { "Vera"                , "vera"                },
+        { "Verilog"             , "verilog"             },
+        { "VHDL"                , "vhdl"                },
+        { "Vim"                 , "vim"                 },
+        { "WindRes"             , "windres"             },
+        { "XSLT"                , "xslt"                },
+        { "YACC"                , "yacc"                },
+        { "Yaml"                , "yaml"                },
+        { "YumRepo"             , "yumrepo"             },
+        { "Zephir"              , "zephir"              }
+      };
 
 }  // unnamed namespace
 
@@ -136,15 +187,11 @@ FiletypeIdentifierMap ExtractIdentifiersFromTagsFile(
     std::string language( matches[ 3 ] );
     std::string filetype = FindWithDefault( LANG_TO_FILETYPE,
                                             language.c_str(),
-                                            NOT_FOUND );
-
-    if ( filetype == NOT_FOUND )
-      continue;
+                                            Lowercase( language ).c_str() );
 
     std::string identifier( matches[ 1 ] );
     fs::path path( matches[ 2 ].str() );
-    path = fs::absolute( path, path_to_tag_file.parent_path() )
-           .make_preferred();
+    path = NormalizePath( path, path_to_tag_file.parent_path() );
 
     filetype_identifier_map[ filetype ][ path.string() ].push_back( identifier );
   }

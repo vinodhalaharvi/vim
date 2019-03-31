@@ -19,15 +19,15 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 import time
 import copy
 import logging
-from threading import Thread, Lock
+from threading import Lock
 from ycmd.handlers import ServerShutdown
+from ycmd.utils import StartThread
 
 _logger = logging.getLogger( __name__ )
 
@@ -60,9 +60,7 @@ class WatchdogPlugin( object ):
     self._last_request_time_lock = Lock()
     if idle_suicide_seconds <= 0:
       return
-    self._watchdog_thread = Thread( target = self._WatchdogMain )
-    self._watchdog_thread.daemon = True
-    self._watchdog_thread.start()
+    StartThread( self._WatchdogMain )
 
 
   def _GetLastRequestTime( self ):
@@ -95,8 +93,8 @@ class WatchdogPlugin( object ):
       # skipped a check, that means the machine probably went to sleep and the
       # client might still actually be up. In such cases, we give it one more
       # wait interval to contact us before we die.
-      if (self._TimeSinceLastRequest() > self._idle_suicide_seconds and
-          self._TimeSinceLastWakeup() < 2 * self._check_interval_seconds):
+      if ( self._TimeSinceLastRequest() > self._idle_suicide_seconds and
+           self._TimeSinceLastWakeup() < 2 * self._check_interval_seconds ):
         _logger.info( 'Shutting down server due to inactivity' )
         ServerShutdown()
 

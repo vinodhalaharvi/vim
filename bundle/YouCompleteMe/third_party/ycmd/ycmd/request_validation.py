@@ -19,8 +19,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 from ycmd.responses import ServerError
@@ -30,9 +29,8 @@ from ycmd.responses import ServerError
 # TODO: Accept a request_type param so that we can also verify missing
 # command_arguments and completer_target fields if necessary.
 def EnsureRequestValid( request_json ):
-  required_fields = set(
-      [ 'line_num', 'column_num', 'filepath', 'file_data' ] )
-  missing = set( x for x in required_fields if x not in request_json )
+  required_fields = { 'line_num', 'column_num', 'filepath', 'file_data' }
+  missing = { x for x in required_fields if x not in request_json }
 
   if 'filepath' not in missing and 'file_data' not in missing:
     missing.update( _MissingFieldsForFileData( request_json ) )

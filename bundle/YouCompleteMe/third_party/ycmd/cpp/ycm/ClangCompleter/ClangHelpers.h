@@ -1,4 +1,4 @@
-// Copyright (C) 2013 Google Inc.
+// Copyright (C) 2013-2018 ycmd contributors
 //
 // This file is part of ycmd.
 //
@@ -24,13 +24,12 @@
 
 #include <vector>
 #include <clang-c/Index.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/type_traits/remove_pointer.hpp>
+#include <memory>
 
 namespace YouCompleteMe {
 
-typedef boost::shared_ptr <
-boost::remove_pointer< CXDiagnostic >::type > DiagnosticWrap;
+using DiagnosticWrap =
+  std::shared_ptr< std::remove_pointer< CXDiagnostic >::type >;
 
 std::vector< CompletionData > ToCompletionDataVector(
   CXCodeCompleteResults *results );
@@ -40,7 +39,7 @@ std::vector< CompletionData > ToCompletionDataVector(
 std::vector< CXUnsavedFile > ToCXUnsavedFiles(
   const std::vector< UnsavedFile > &unsaved_files );
 
-Diagnostic BuildDiagnostic( DiagnosticWrap diagnostic_wrap,
+Diagnostic BuildDiagnostic( const DiagnosticWrap &diagnostic_wrap,
                             CXTranslationUnit translation_unit );
 
 } // namespace YouCompleteMe

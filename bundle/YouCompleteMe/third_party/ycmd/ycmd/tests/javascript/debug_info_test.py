@@ -1,4 +1,4 @@
-# Copyright (C) 2016 ycmd contributors
+# Copyright (C) 2018 ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -19,52 +19,49 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
-from hamcrest import assert_that, matches_regexp
+from mock import patch
+from hamcrest import ( any_of, assert_that, contains, has_entries, has_entry,
+                       instance_of, none )
 
 from ycmd.tests.javascript import IsolatedYcmd, SharedYcmd
-from ycmd.tests.test_utils import BuildRequest, StopCompleterServer, UserOption
+from ycmd.tests.test_utils import BuildRequest
 
 
 @SharedYcmd
-def DebugInfo_ServerIsRunning_test( app ):
+def DebugInfo_TypeScriptCompleter_test( app ):
   request_data = BuildRequest( filetype = 'javascript' )
   assert_that(
     app.post_json( '/debug_info', request_data ).json,
-    matches_regexp( 'JavaScript completer debug information:\n'
-                    '  Tern running at: http://127.0.0.1:\d+\n'
-                    '  Tern process ID: \d+\n'
-                    '  Tern executable: .+\n'
-                    '  Tern logfiles:\n'
-                    '    .+\n'
-                    '    .+' ) )
+    has_entry( 'completer', has_entries( {
+      'name': 'TypeScript',
+      'servers': contains( has_entries( {
+        'name': 'TSServer',
+        'is_running': True,
+        'executable': instance_of( str ),
+        'pid': instance_of( int ),
+        'address': None,
+        'port': None,
+        'logfiles': contains( instance_of( str ) ),
+        'extras': contains( has_entries( {
+          'key': 'version',
+          'value': any_of( None, instance_of( str ) )
+        } ) )
+      } ) )
+    } ) )
+  )
 
 
+@patch( 'ycmd.completers.typescript.typescript_completer.'
+        'ShouldEnableTypeScriptCompleter', return_value = False )
+@patch( 'ycmd.completers.javascript.tern_completer.'
+        'ShouldEnableTernCompleter', return_value = False )
 @IsolatedYcmd
-def DebugInfo_ServerIsNotRunning_LogfilesExist_test( app ):
-  with UserOption( 'server_keep_logfiles', True ):
-    StopCompleterServer( app, 'javascript' )
-    request_data = BuildRequest( filetype = 'javascript' )
-    assert_that(
-      app.post_json( '/debug_info', request_data ).json,
-      matches_regexp( 'JavaScript completer debug information:\n'
-                      '  Tern no longer running\n'
-                      '  Tern executable: .+\n'
-                      '  Tern logfiles:\n'
-                      '    .+\n'
-                      '    .+' ) )
-
-
-@IsolatedYcmd
-def DebugInfo_ServerIsNotRunning_LogfilesDoNotExist_test( app ):
-  with UserOption( 'server_keep_logfiles', False ):
-    StopCompleterServer( app, 'javascript' )
-    request_data = BuildRequest( filetype = 'javascript' )
-    assert_that(
-      app.post_json( '/debug_info', request_data ).json,
-      matches_regexp( 'JavaScript completer debug information:\n'
-                      '  Tern is not running\n'
-                      '  Tern executable: .+' ) )
+def DebugInfo_NoCompleter_test( app, *args ):
+  request_data = BuildRequest( filetype = 'javascript' )
+  assert_that(
+    app.post_json( '/debug_info', request_data ).json,
+    has_entry( 'completer', none() )
+  )

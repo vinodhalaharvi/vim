@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
 
+import argparse
 import os
 import platform
 import re
@@ -14,64 +15,48 @@ import tarfile
 from tempfile import mkdtemp
 from shutil import rmtree
 from distutils.dir_util import copy_tree
+from multiprocessing import cpu_count
 
-DIR_OF_THIS_SCRIPT = os.path.dirname( os.path.abspath( __file__ ) )
-DIR_OF_THIRD_PARTY = os.path.join( DIR_OF_THIS_SCRIPT, 'third_party' )
+DIR_OF_THIS_SCRIPT = os.path.abspath( os.path.dirname( __file__ ) )
 
-sys.path.insert(
-  1, os.path.abspath( os.path.join( DIR_OF_THIRD_PARTY, 'argparse' ) ) )
-sys.path.insert(
-  1, os.path.abspath( os.path.join( DIR_OF_THIRD_PARTY, 'requests' ) ) )
+sys.path.insert( 1, os.path.join( DIR_OF_THIS_SCRIPT, 'third_party',
+                                  'requests' ) )
 
-import argparse
 import requests
 
 CHUNK_SIZE = 1024 * 1024 # 1 MB
 
 BOOST_VERSION_REGEX = re.compile( 'Version (\d+\.\d+\.\d+)' )
-BOOST_URL = ( 'https://sourceforge.net/projects/boost/files/boost/'
-              '{version}/{archive}/download' )
+BOOST_URL = (
+  'http://dl.bintray.com/boostorg/release/{version}/source/{archive}' )
 BOOST_NAME = 'boost_{version_}'
 BOOST_ARCHIVE = BOOST_NAME + '.tar.bz2'
 BOOST_PARTS = [
-  'boost/utility.hpp',
-  'boost/python.hpp',
-  'boost/bind.hpp',
-  'boost/lambda/lambda.hpp',
-  'boost/exception/all.hpp',
-  'boost/tuple/tuple_io.hpp',
-  'boost/tuple/tuple_comparison.hpp',
-  'boost/regex.hpp',
-  'boost/foreach.hpp',
-  'boost/smart_ptr.hpp',
-  'boost/algorithm/string_regex.hpp',
-  'boost/thread.hpp',
-  'boost/unordered_map.hpp',
-  'boost/unordered_set.hpp',
-  'boost/format.hpp',
-  'boost/ptr_container/ptr_container.hpp',
+  'boost/algorithm/string/regex.hpp',
   'boost/filesystem.hpp',
-  'boost/filesystem/fstream.hpp',
-  'boost/utility.hpp',
-  'boost/algorithm/cxx11/any_of.hpp',
-  'atomic',
-  'lockfree',
-  'assign',
-  'system'
+  'boost/regex.hpp'
 ]
 BOOST_LIBS_FOLDERS_TO_REMOVE = [
   'assign',
-  'mpi',
+  'atomic',
+  'build',
+  'chrono',
   'config',
-  'lockfree',
+  'date_time',
   'doc',
-  'test',
   'examples',
-  'build'
-]
-BOOST_LIBS_FILES_TO_REMOVE = [
-  # Extracted with Boost 1.61.0 and breaks the build on Windows.
-  'xml_woarchive.cpp'
+  'exception',
+  'lockfree',
+  'mpi',
+  'python',
+  'serialization',
+  'smart_ptr',
+  'test',
+  'thread',
+  'timer',
+  # Numpy support was added in Boost 1.63.0. We remove its folder since it
+  # breaks the build and we don't need it.
+  'numpy'
 ]
 BOOST_LIBS_EXTENSIONS_TO_KEEP = [
   '.hpp',
@@ -134,8 +119,7 @@ def CleanBoostParts( boost_libs_dir ):
         rmtree( os.path.join( root, directory ) )
     for filename in files:
       extension = os.path.splitext( filename )[ 1 ]
-      if ( filename in BOOST_LIBS_FILES_TO_REMOVE or
-           extension not in BOOST_LIBS_EXTENSIONS_TO_KEEP ):
+      if extension not in BOOST_LIBS_EXTENSIONS_TO_KEEP:
         os.remove( os.path.join( root, filename ) )
 
 
@@ -157,6 +141,7 @@ def ExtractBoostParts( args ):
                                               '.sh' ) )
     subprocess.call( [ bootstrap ] )
     subprocess.call( [ os.path.join( os.curdir, 'b2' ),
+                       '-j' + str( cpu_count() ),
                        os.path.join( 'tools', 'bcp' ) ] )
     boost_parts_dir = os.path.join( os.curdir, 'boost_parts' )
     os.mkdir( boost_parts_dir )

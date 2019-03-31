@@ -31,23 +31,33 @@ appveyor DownloadFile https://bootstrap.pypa.io/get-pip.py
 python get-pip.py
 pip install -r test_requirements.txt
 if %errorlevel% neq 0 exit /b %errorlevel%
-
-::
-:: Typescript configuration
-::
-
-:: Since npm executable is a batch file, we need to prefix it with a call
-:: statement. See https://github.com/npm/npm/issues/2938
-call npm install -g typescript
+pip install codecov
 if %errorlevel% neq 0 exit /b %errorlevel%
+
+:: Enable coverage for Python subprocesses. See:
+:: http://coverage.readthedocs.io/en/latest/subprocess.html
+python -c "with open('%python_path%\Lib\site-packages\sitecustomize.py', 'w') as f: f.write('import coverage\ncoverage.process_startup()')"
 
 ::
 :: Rust configuration
 ::
 
-appveyor DownloadFile https://static.rust-lang.org/dist/rust-1.8.0-x86_64-pc-windows-msvc.exe
-rust-1.8.0-x86_64-pc-windows-msvc.exe /VERYSILENT /NORESTART /DIR="C:\Program Files\Rust"
-set PATH=C:\Program Files\Rust\bin;%PATH%
+appveyor DownloadFile https://static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe
+rustup-init.exe -y
 
+set PATH=%USERPROFILE%\.cargo\bin;%PATH%
+rustup update
 rustc -Vv
 cargo -V
+
+::
+:: Java Configuration (Java 8 required for jdt.ls)
+::
+if %arch% == 32 (
+  set "JAVA_HOME=C:\Program Files (x86)\Java\jdk1.8.0"
+) else (
+  set "JAVA_HOME=C:\Program Files\Java\jdk1.8.0"
+)
+
+set PATH=%JAVA_HOME%\bin;%PATH%
+java -version

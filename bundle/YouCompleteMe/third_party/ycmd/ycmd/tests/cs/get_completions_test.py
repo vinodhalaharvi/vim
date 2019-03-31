@@ -1,6 +1,6 @@
 # coding: utf-8
 #
-# Copyright (C) 2015 ycmd contributors
+# Copyright (C) 2015-2018 ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -21,8 +21,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 from hamcrest import ( assert_that, calling, empty, greater_than, has_item,
@@ -314,7 +313,7 @@ def SolutionSelectCheck( app, sourcefile, reference_solution,
                                         filetype = 'cs' ) ).json
 
   # Now that cleanup is done, verify solution file
-  eq_( reference_solution, result)
+  eq_( reference_solution, result )
 
 
 @SharedYcmd

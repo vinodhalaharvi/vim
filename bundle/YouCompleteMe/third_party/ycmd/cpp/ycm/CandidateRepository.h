@@ -1,4 +1,4 @@
-// Copyright (C) 2011, 2012 Google Inc.
+// Copyright (C) 2011-2018 ycmd contributors
 //
 // This file is part of ycmd.
 //
@@ -18,22 +18,18 @@
 #ifndef CANDIDATEREPOSITORY_H_K9OVCMHG
 #define CANDIDATEREPOSITORY_H_K9OVCMHG
 
-#include "DLLDefines.h"
+#include "Candidate.h"
 
-#include <boost/utility.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/thread/mutex.hpp>
-
-#include <vector>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace YouCompleteMe {
 
-class Candidate;
-struct CompletionData;
-
-typedef boost::unordered_map< std::string, const Candidate * >
-CandidateHolder;
+using CandidateHolder = std::unordered_map< std::string,
+                                            std::unique_ptr< Candidate > >;
 
 
 // This singleton stores already built Candidate objects for candidate strings
@@ -44,35 +40,33 @@ CandidateHolder;
 // work is not repeated.
 //
 // This class is thread-safe.
-class CandidateRepository : boost::noncopyable {
+class CandidateRepository {
 public:
-  YCM_DLL_EXPORT static CandidateRepository &Instance();
+  YCM_EXPORT static CandidateRepository &Instance();
+  // Make class noncopyable
+  CandidateRepository( const CandidateRepository& ) = delete;
+  CandidateRepository& operator=( const CandidateRepository& ) = delete;
 
-  int NumStoredCandidates();
+  size_t NumStoredCandidates();
 
-  YCM_DLL_EXPORT std::vector< const Candidate * > GetCandidatesForStrings(
+  YCM_EXPORT std::vector< const Candidate * > GetCandidatesForStrings(
     const std::vector< std::string > &strings );
 
-#ifdef USE_CLANG_COMPLETER
-  std::vector< const Candidate * > GetCandidatesForStrings(
-    const std::vector< CompletionData > &datas );
-#endif // USE_CLANG_COMPLETER
+  // This should only be used to isolate tests and benchmarks.
+  YCM_EXPORT void ClearCandidates();
 
 private:
-  CandidateRepository() {};
-  ~CandidateRepository();
+  CandidateRepository() = default;
+  ~CandidateRepository() = default;
 
-  const std::string &ValidatedCandidateText( const std::string &text );
-
-  boost::mutex holder_mutex_;
-
-  static boost::mutex singleton_mutex_;
-  static CandidateRepository *instance_;
+  const std::string &ValidatedCandidateText(
+      const std::string &candidate_text );
 
   const std::string empty_;
 
   // This data structure owns all the Candidate pointers
   CandidateHolder candidate_holder_;
+  std::mutex candidate_holder_mutex_;
 };
 
 } // namespace YouCompleteMe

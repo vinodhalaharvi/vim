@@ -18,23 +18,27 @@
 #include "TranslationUnitStore.h"
 #include "TranslationUnit.h"
 #include "Utils.h"
-#include "exceptions.h"
 
-#include <boost/thread/locks.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/functional/hash.hpp>
+#include <functional>
 
-using boost::lock_guard;
-using boost::shared_ptr;
-using boost::make_shared;
-using boost::mutex;
+using std::lock_guard;
+using std::shared_ptr;
+using std::make_shared;
+using std::mutex;
 
 namespace YouCompleteMe {
 
 namespace {
 
 std::size_t HashForFlags( const std::vector< std::string > &flags ) {
-  return boost::hash< std::vector< std::string > >()( flags );
+  // The algorithm has been taken straight from a TR1:
+  // "Library Extension Technical Report - Issue List" section 6.18.
+  // This is also the way Boost implements it.
+  size_t seed = 0;
+  for ( const auto &flag : flags )  {
+    seed ^= std::hash< std::string >()( flag ) + ( seed << 6 ) + ( seed >> 2 );
+  }
+  return seed;
 }
 
 }  // unnamed namespace
@@ -86,16 +90,16 @@ shared_ptr< TranslationUnit > TranslationUnitStore::GetOrCreate(
     filename_to_flags_hash_[ filename ] = HashForFlags( flags );
   }
 
-  boost::shared_ptr< TranslationUnit > unit;
+  shared_ptr< TranslationUnit > unit;
 
   try {
-    unit = boost::make_shared< TranslationUnit >( filename,
-                                                  unsaved_files,
-                                                  flags,
-                                                  clang_index_ );
-  } catch ( ClangParseError & ) {
+    unit = make_shared< TranslationUnit >( filename,
+                                           unsaved_files,
+                                           flags,
+                                           clang_index_ );
+  } catch ( const ClangParseError & ) {
     Remove( filename );
-    return unit;
+    throw;
   }
 
   {

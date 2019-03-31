@@ -1,15 +1,11 @@
 language: generic
-os:
-  - linux
-  - osx
 sudo: false
 before_install:
   - git submodule update --init --recursive
 install:
   # source because it sets up env vars on some platforms
   - source ci/travis/travis_install.sh
-script:
-  - ci/travis/travis_script.sh
+script: ./run_tests.py
 after_success:
   - codecov
 env:
@@ -18,14 +14,8 @@ env:
     - YCM_CORES=3
     - COVERAGE=true
   matrix:
-    - YCM_PYTHON_VERSION=2.7 YCM_FLAKE8=true
-    # Since 3.0.4, Flake8 is not working anymore on Python 2.6.
-    - YCM_PYTHON_VERSION=2.6 YCM_FLAKE8=false
-    - YCM_PYTHON_VERSION=3.3 YCM_FLAKE8=true
-matrix:
-  exclude:
-    - os: osx
-      env: YCM_PYTHON_VERSION=2.6 YCM_FLAKE8=false
+    - YCM_PYTHON_VERSION=2.7
+    - YCM_PYTHON_VERSION=3.4
 addons:
   apt:
     sources:
@@ -36,8 +26,9 @@ addons:
     packages:
      - cmake-data
      - cmake
+     # 4.8 is the first version of GCC with good enough C++11 support to build
+     # ycmd.
      - g++-4.8
-     - ninja-build
      # Everything below is a Python build dep (though it depends on Python
      # version). We need them because pyenv builds Python.
      - libssl-dev

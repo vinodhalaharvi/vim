@@ -1,6 +1,6 @@
 # coding: utf-8
 #
-# Copyright (C) 2013 Google Inc.
+# Copyright (C) 2013-2018 ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -21,8 +21,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 from nose.tools import eq_, ok_
@@ -32,86 +31,80 @@ from hamcrest import assert_that, has_item
 
 def RemoveIdentifierFreeText_CppComments_test():
   eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          "foo \nbar //foo \nqux" ) )
+       iu.RemoveIdentifierFreeText( "foo \nbar //foo \nqux" ) )
 
 
 def RemoveIdentifierFreeText_PythonComments_test():
   eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          "foo \nbar #foo \nqux" ) )
+       iu.RemoveIdentifierFreeText( "foo \nbar #foo \nqux" ) )
 
 
 def RemoveIdentifierFreeText_CstyleComments_test():
-  eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          "foo \nbar /* foo */\nqux" ) )
+  eq_( "\n bar",
+       iu.RemoveIdentifierFreeText( "/* foo\n */ bar" ) )
 
   eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          "foo \nbar /* foo \n foo2 */\nqux" ) )
+       iu.RemoveIdentifierFreeText( "foo \nbar /* foo */\nqux" ) )
+
+  eq_( "foo \nbar \n\nqux",
+       iu.RemoveIdentifierFreeText( "foo \nbar /* foo \n foo2 */\nqux" ) )
 
 
 def RemoveIdentifierFreeText_SimpleSingleQuoteString_test():
   eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          "foo \nbar 'foo'\nqux" ) )
+       iu.RemoveIdentifierFreeText( "foo \nbar 'foo'\nqux" ) )
 
 
 def RemoveIdentifierFreeText_SimpleDoubleQuoteString_test():
   eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          'foo \nbar "foo"\nqux' ) )
+       iu.RemoveIdentifierFreeText( 'foo \nbar "foo"\nqux' ) )
 
 
 def RemoveIdentifierFreeText_EscapedQuotes_test():
   eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          "foo \nbar 'fo\\'oz\\nfoo'\nqux" ) )
+       iu.RemoveIdentifierFreeText( "foo \nbar 'fo\\'oz\\nfoo'\nqux" ) )
 
   eq_( "foo \nbar \nqux",
-       iu.RemoveIdentifierFreeText(
-          'foo \nbar "fo\\"oz\\nfoo"\nqux' ) )
+       iu.RemoveIdentifierFreeText( 'foo \nbar "fo\\"oz\\nfoo"\nqux' ) )
 
 
 def RemoveIdentifierFreeText_SlashesInStrings_test():
   eq_( "foo \nbar baz\nqux ",
-       iu.RemoveIdentifierFreeText(
-           'foo \nbar "fo\\\\"baz\nqux "qwe"' ) )
+       iu.RemoveIdentifierFreeText( 'foo \nbar "fo\\\\"baz\nqux "qwe"' ) )
 
   eq_( "foo \nbar \nqux ",
-       iu.RemoveIdentifierFreeText(
-           "foo '\\\\'\nbar '\\\\'\nqux '\\\\'" ) )
+       iu.RemoveIdentifierFreeText( "foo '\\\\'\nbar '\\\\'\nqux '\\\\'" ) )
 
 
 def RemoveIdentifierFreeText_EscapedQuotesStartStrings_test():
   eq_( "\\\"foo\\\" zoo",
-       iu.RemoveIdentifierFreeText(
-           "\\\"foo\\\"'\"''bar' zoo'test'" ) )
+       iu.RemoveIdentifierFreeText( "\\\"foo\\\"'\"''bar' zoo'test'" ) )
 
   eq_( "\\'foo\\' zoo",
-       iu.RemoveIdentifierFreeText(
-           "\\'foo\\'\"'\"\"bar\" zoo\"test\"" ) )
+       iu.RemoveIdentifierFreeText( "\\'foo\\'\"'\"\"bar\" zoo\"test\"" ) )
 
 
 def RemoveIdentifierFreeText_NoMultilineString_test():
   eq_( "'\nlet x = \nlet y = ",
-       iu.RemoveIdentifierFreeText(
-           "'\nlet x = 'foo'\nlet y = 'bar'" ) )
+       iu.RemoveIdentifierFreeText( "'\nlet x = 'foo'\nlet y = 'bar'" ) )
 
   eq_( "\"\nlet x = \nlet y = ",
-       iu.RemoveIdentifierFreeText(
-           "\"\nlet x = \"foo\"\nlet y = \"bar\"" ) )
+       iu.RemoveIdentifierFreeText( "\"\nlet x = \"foo\"\nlet y = \"bar\"" ) )
 
 
 def RemoveIdentifierFreeText_PythonMultilineString_test():
-  eq_( "\nzoo",
-       iu.RemoveIdentifierFreeText(
-           "\"\"\"\nfoobar\n\"\"\"\nzoo" ) )
+  eq_( "\n\n\nzoo",
+       iu.RemoveIdentifierFreeText( "\"\"\"\nfoobar\n\"\"\"\nzoo" ) )
 
-  eq_( "\nzoo",
-       iu.RemoveIdentifierFreeText(
-           "'''\nfoobar\n'''\nzoo" ) )
+  eq_( "\n\n\nzoo",
+       iu.RemoveIdentifierFreeText( "'''\nfoobar\n'''\nzoo" ) )
+
+
+def RemoveIdentifierFreeText_GoBackQuoteString_test():
+  eq_( "foo \nbar `foo`\nqux",
+       iu.RemoveIdentifierFreeText( "foo \nbar `foo`\nqux" ) )
+  eq_( "foo \nbar \nqux",
+       iu.RemoveIdentifierFreeText( "foo \nbar `foo`\nqux", filetype = 'go' ) )
 
 
 def ExtractIdentifiersFromText_test():
@@ -137,7 +130,13 @@ def ExtractIdentifiersFromText_Html_TemplateChars_test():
                has_item( 'goo' ) )
 
 
-def IsIdentifier_generic_test():
+def ExtractIdentifiersFromText_JavaScript_test():
+  eq_( [ "var", "foo", "require", "bar" ],
+       iu.ExtractIdentifiersFromText( "var foo = require('bar');",
+                                      'javascript' ) )
+
+
+def IsIdentifier_Default_test():
   ok_( iu.IsIdentifier( 'foo' ) )
   ok_( iu.IsIdentifier( 'foo129' ) )
   ok_( iu.IsIdentifier( 'f12' ) )
@@ -148,6 +147,11 @@ def IsIdentifier_generic_test():
   ok_( iu.IsIdentifier( '_f12' ) )
   ok_( iu.IsIdentifier( '_f12' ) )
 
+  ok_( iu.IsIdentifier( 'uniçode' ) )
+  ok_( iu.IsIdentifier( 'uç' ) )
+  ok_( iu.IsIdentifier( 'ç' ) )
+  ok_( iu.IsIdentifier( 'çode' ) )
+
   ok_( not iu.IsIdentifier( '1foo129' ) )
   ok_( not iu.IsIdentifier( '-foo' ) )
   ok_( not iu.IsIdentifier( 'foo-' ) )
@@ -156,21 +160,27 @@ def IsIdentifier_generic_test():
   ok_( not iu.IsIdentifier( '' ) )
 
 
-def IsIdentifier_generic_unicode_test():
-  ok_( iu.IsIdentifier( 'uniçode' ) )
-  ok_( iu.IsIdentifier( 'uç' ) )
+def IsIdentifier_JavaScript_test():
+  ok_( iu.IsIdentifier( '_føo1', 'javascript' ) )
+  ok_( iu.IsIdentifier( 'fø_o1', 'javascript' ) )
+  ok_( iu.IsIdentifier( '$føo1', 'javascript' ) )
+  ok_( iu.IsIdentifier( 'fø$o1', 'javascript' ) )
+
+  ok_( not iu.IsIdentifier( '1føo', 'javascript' ) )
 
 
-def IsIdentifier_generic_unicode_single_char_test():
-  ok_( iu.IsIdentifier( 'ç' ) )
+def IsIdentifier_TypeScript_test():
+  ok_( iu.IsIdentifier( '_føo1', 'typescript' ) )
+  ok_( iu.IsIdentifier( 'fø_o1', 'typescript' ) )
+  ok_( iu.IsIdentifier( '$føo1', 'typescript' ) )
+  ok_( iu.IsIdentifier( 'fø$o1', 'typescript' ) )
 
-
-def IsIdentifier_generic_unicode_char_first_test():
-  ok_( iu.IsIdentifier( 'çode' ) )
+  ok_( not iu.IsIdentifier( '1føo', 'typescript' ) )
 
 
 def IsIdentifier_Css_test():
   ok_( iu.IsIdentifier( 'foo'      , 'css' ) )
+  ok_( iu.IsIdentifier( 'a'        , 'css' ) )
   ok_( iu.IsIdentifier( 'a1'       , 'css' ) )
   ok_( iu.IsIdentifier( 'a-'       , 'css' ) )
   ok_( iu.IsIdentifier( 'a-b'      , 'css' ) )
@@ -178,12 +188,14 @@ def IsIdentifier_Css_test():
   ok_( iu.IsIdentifier( '-ms-foo'  , 'css' ) )
   ok_( iu.IsIdentifier( '-_o'      , 'css' ) )
   ok_( iu.IsIdentifier( 'font-face', 'css' ) )
+  ok_( iu.IsIdentifier( 'αβγ'      , 'css' ) )
 
   ok_( not iu.IsIdentifier( '-3b', 'css' ) )
   ok_( not iu.IsIdentifier( '-3' , 'css' ) )
+  ok_( not iu.IsIdentifier( '--' , 'css' ) )
   ok_( not iu.IsIdentifier( '3'  , 'css' ) )
-  ok_( not iu.IsIdentifier( 'a'  , 'css' ) )
-  ok_( not iu.IsIdentifier( '' , 'css' ) )
+  ok_( not iu.IsIdentifier( ''   , 'css' ) )
+  ok_( not iu.IsIdentifier( '€'  , 'css' ) )
 
 
 def IsIdentifier_R_test():
@@ -205,7 +217,7 @@ def IsIdentifier_R_test():
   ok_( not iu.IsIdentifier( '123', 'r' ) )
   ok_( not iu.IsIdentifier( '_1a', 'r' ) )
   ok_( not iu.IsIdentifier( '_a' , 'r' ) )
-  ok_( not iu.IsIdentifier( '' , 'r' ) )
+  ok_( not iu.IsIdentifier( ''   , 'r' ) )
 
 
 def IsIdentifier_Clojure_test():
@@ -231,7 +243,7 @@ def IsIdentifier_Clojure_test():
   ok_( not iu.IsIdentifier( '9'    , 'clojure' ) )
   ok_( not iu.IsIdentifier( 'a/b/c', 'clojure' ) )
   ok_( not iu.IsIdentifier( '(a)'  , 'clojure' ) )
-  ok_( not iu.IsIdentifier( '' , 'clojure' ) )
+  ok_( not iu.IsIdentifier( ''     , 'clojure' ) )
 
 
 def IsIdentifier_Elisp_test():
@@ -245,7 +257,7 @@ def IsIdentifier_Elisp_test():
   ok_( not iu.IsIdentifier( '9'    , 'elisp' ) )
   ok_( not iu.IsIdentifier( 'a/b/c', 'elisp' ) )
   ok_( not iu.IsIdentifier( '(a)'  , 'elisp' ) )
-  ok_( not iu.IsIdentifier( '' , 'elisp' ) )
+  ok_( not iu.IsIdentifier( ''     , 'elisp' ) )
 
 
 def IsIdentifier_Haskell_test():
@@ -259,19 +271,22 @@ def IsIdentifier_Haskell_test():
   ok_( not iu.IsIdentifier( "'x", 'haskell' ) )
   ok_( not iu.IsIdentifier( "9x", 'haskell' ) )
   ok_( not iu.IsIdentifier( "9" , 'haskell' ) )
-  ok_( not iu.IsIdentifier( '' , 'haskell' ) )
+  ok_( not iu.IsIdentifier( ''  , 'haskell' ) )
 
 
 def IsIdentifier_Tex_test():
-  ok_( iu.IsIdentifier( 'foo', 'tex' ) )
-  ok_( iu.IsIdentifier( 'fig:foo', 'tex' ) )
+  ok_( iu.IsIdentifier( 'foo'        , 'tex' ) )
+  ok_( iu.IsIdentifier( 'fig:foo'    , 'tex' ) )
   ok_( iu.IsIdentifier( 'fig:foo-bar', 'tex' ) )
   ok_( iu.IsIdentifier( 'sec:summary', 'tex' ) )
-  ok_( iu.IsIdentifier( 'eq:bar_foo', 'tex' ) )
+  ok_( iu.IsIdentifier( 'eq:bar_foo' , 'tex' ) )
+  ok_( iu.IsIdentifier( 'fōo'        , 'tex' ) )
+  ok_( iu.IsIdentifier( 'some8'      , 'tex' ) )
 
-  ok_( not iu.IsIdentifier( '\section', 'tex' ) )
-  ok_( not iu.IsIdentifier( 'some8', 'tex' ) )
-  ok_( not iu.IsIdentifier( '' , 'tex' ) )
+  ok_( not iu.IsIdentifier( '\\section', 'tex' ) )
+  ok_( not iu.IsIdentifier( 'foo:'    , 'tex' ) )
+  ok_( not iu.IsIdentifier( '-bar'    , 'tex' ) )
+  ok_( not iu.IsIdentifier( ''        , 'tex' ) )
 
 
 def IsIdentifier_Perl6_test():
@@ -298,7 +313,38 @@ def IsIdentifier_Perl6_test():
   ok_( not iu.IsIdentifier( "x+"  , 'perl6' ) )
   ok_( not iu.IsIdentifier( "9x"  , 'perl6' ) )
   ok_( not iu.IsIdentifier( "9"   , 'perl6' ) )
-  ok_( not iu.IsIdentifier( '' , 'perl6' ) )
+  ok_( not iu.IsIdentifier( ''    , 'perl6' ) )
+
+
+def IsIdentifier_Scheme_test():
+  ok_( iu.IsIdentifier( 'λ'         , 'scheme' ) )
+  ok_( iu.IsIdentifier( '_'         , 'scheme' ) )
+  ok_( iu.IsIdentifier( '+'         , 'scheme' ) )
+  ok_( iu.IsIdentifier( '-'         , 'scheme' ) )
+  ok_( iu.IsIdentifier( '...'       , 'scheme' ) )
+  ok_( iu.IsIdentifier( r'\x01;'    , 'scheme' ) )
+  ok_( iu.IsIdentifier( r'h\x65;lle', 'scheme' ) )
+  ok_( iu.IsIdentifier( 'foo'       , 'scheme' ) )
+  ok_( iu.IsIdentifier( 'foo+-*/1-1', 'scheme' ) )
+  ok_( iu.IsIdentifier( 'call/cc'   , 'scheme' ) )
+
+  ok_( not iu.IsIdentifier( '.'            , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '..'           , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '--'           , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '++'           , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '+1'           , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '-1'           , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '-abc'         , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '-<abc'        , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '@'            , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '@a'           , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '-@a'          , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '-12a'         , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '12a'          , 'scheme' ) )
+  ok_( not iu.IsIdentifier( '\\'           , 'scheme' ) )
+  ok_( not iu.IsIdentifier( r'\x'          , 'scheme' ) )
+  ok_( not iu.IsIdentifier( r'\x123'       , 'scheme' ) )
+  ok_( not iu.IsIdentifier( r'aa\x123;cc\x', 'scheme' ) )
 
 
 def StartOfLongestIdentifierEndingAtIndex_Simple_test():

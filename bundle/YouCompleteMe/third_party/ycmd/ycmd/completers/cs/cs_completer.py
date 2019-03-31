@@ -1,5 +1,4 @@
-# Copyright (C) 2011, 2012 Chiel ten Brinke <ctenbrinke@gmail.com>
-#                          Google Inc.
+# Copyright (C) 2011-2018 ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -20,28 +19,26 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
-from future import standard_library
-standard_library.install_aliases()
-from future.utils import itervalues
 
 from collections import defaultdict
+from future.utils import itervalues
+import logging
 import os
-import re
+import requests
+import threading
+
 from ycmd.completers.completer import Completer
-from ycmd.utils import ForceSemanticCompletion, CodepointOffsetToByteOffset
+from ycmd.completers.completer_utils import GetFileLines
+from ycmd.completers.cs import solutiondetection
+from ycmd.utils import CodepointOffsetToByteOffset, re, urljoin
 from ycmd import responses
 from ycmd import utils
-from ycmd.completers.completer_utils import GetFileContents
-import requests
-import urllib.parse
-import logging
-from . import solutiondetection
-import threading
 
 SERVER_NOT_FOUND_MSG = ( 'OmniSharp server binary not found at {0}. ' +
                          'Did you compile it? You can do so by running ' +
-                         '"./install.py --omnisharp-completer".' )
+                         '"./install.py --cs-completer".' )
 INVALID_FILE_MESSAGE = 'File is invalid.'
 NO_DIAGNOSTIC_MESSAGE = 'No diagnostic for current line!'
 PATH_TO_OMNISHARP_BINARY = os.path.abspath(
@@ -62,8 +59,6 @@ class CsharpCompleter( Completer ):
     self._solution_for_file = {}
     self._completer_per_solution = {}
     self._diagnostic_store = None
-    self._max_diagnostics_to_display = user_options[
-      'max_diagnostics_to_display' ]
     self._solution_state_lock = threading.Lock()
 
     if not os.path.isfile( PATH_TO_OMNISHARP_BINARY ):
@@ -104,13 +99,8 @@ class CsharpCompleter( Completer ):
     return True
 
 
-  def CompletionType( self, request_data ):
-    return ForceSemanticCompletion( request_data )
-
-
   def ComputeCandidatesInner( self, request_data ):
     solutioncompleter = self._GetSolutionCompleter( request_data )
-    completion_type = self.CompletionType( request_data )
     return [ responses.BuildCompletionData(
                 completion[ 'CompletionText' ],
                 completion[ 'DisplayText' ],
@@ -120,8 +110,7 @@ class CsharpCompleter( Completer ):
                 { "required_namespace_import" :
                    completion[ 'RequiredNamespaceImport' ] } )
              for completion
-             in solutioncompleter._GetCompletions( request_data,
-                                                   completion_type ) ]
+             in solutioncompleter._GetCompletions( request_data ) ]
 
 
   def FilterAndSortCandidates( self, candidates, query ):
@@ -212,8 +201,9 @@ class CsharpCompleter( Completer ):
 
     self._diagnostic_store = DiagnosticsToDiagStructure( diagnostics )
 
-    return [ responses.BuildDiagnosticData( x ) for x in
-             diagnostics[ : self._max_diagnostics_to_display ] ]
+    return responses.BuildDiagnosticResponse( diagnostics,
+                                              request_data[ 'filepath' ],
+                                              self.max_diagnostics_to_display )
 
 
   def _QuickFixToDiagnostic( self, request_data, quick_fix ):
@@ -231,7 +221,7 @@ class CsharpCompleter( Completer ):
     if not location_end:
       location_end = location
     location_extent = responses.Range( location, location_end )
-    return responses.Diagnostic( list(),
+    return responses.Diagnostic( [],
                                  location,
                                  location_extent,
                                  quick_fix[ 'Text' ],
@@ -270,47 +260,30 @@ class CsharpCompleter( Completer ):
     try:
       completer = self._GetSolutionCompleter( request_data )
     except RuntimeError:
-      return (
-        'C# completer debug information:\n'
-        '  OmniSharp not running\n'
-        '  OmniSharp executable: {0}\n'
-        '  OmniSharp solution: not found'.format( PATH_TO_OMNISHARP_BINARY ) )
+      omnisharp_server = responses.DebugInfoServer(
+        name = 'OmniSharp',
+        handle = None,
+        executable = PATH_TO_OMNISHARP_BINARY )
+
+      return responses.BuildDebugInfoResponse( name = 'C#',
+                                               servers = [ omnisharp_server ] )
 
     with completer._server_state_lock:
-      if completer._ServerIsRunning():
-        return (
-          'C# completer debug information:\n'
-          '  OmniSharp running at: {0}\n'
-          '  OmniSharp process ID: {1}\n'
-          '  OmniSharp executable: {2}\n'
-          '  OmniSharp logfiles:\n'
-          '    {3}\n'
-          '    {4}\n'
-          '  OmniSharp solution: {5}'.format( completer._ServerLocation(),
-                                              completer._omnisharp_phandle.pid,
-                                              PATH_TO_OMNISHARP_BINARY,
-                                              completer._filename_stdout,
-                                              completer._filename_stderr,
-                                              completer._solution_path ) )
+      solution_item = responses.DebugInfoItem(
+        key = 'solution',
+        value = completer._solution_path )
 
-      if completer._filename_stdout and completer._filename_stderr:
-        return (
-          'C# completer debug information:\n'
-          '  OmniSharp no longer running\n'
-          '  OmniSharp executable: {0}\n'
-          '  OmniSharp logfiles:\n'
-          '    {1}\n'
-          '    {2}\n'
-          '  OmniSharp solution: {3}'.format( PATH_TO_OMNISHARP_BINARY,
-                                              completer._filename_stdout,
-                                              completer._filename_stderr,
-                                              completer._solution_path ) )
+      omnisharp_server = responses.DebugInfoServer(
+        name = 'OmniSharp',
+        handle = completer._omnisharp_phandle,
+        executable = PATH_TO_OMNISHARP_BINARY,
+        address = 'localhost',
+        port = completer._omnisharp_port,
+        logfiles = [ completer._filename_stdout, completer._filename_stderr ],
+        extras = [ solution_item ] )
 
-      return ( 'C# completer debug information:\n'
-               '  OmniSharp is not running\n'
-               '  OmniSharp executable: {0}\n'
-               '  OmniSharp solution: {1}'.format( PATH_TO_OMNISHARP_BINARY,
-                                                   completer._solution_path ) )
+      return responses.BuildDebugInfoResponse( name = 'C#',
+                                               servers = [ omnisharp_server ] )
 
 
   def ServerIsHealthy( self ):
@@ -414,12 +387,12 @@ class CsharpSolutionCompleter( object ):
       if self._ServerIsRunning():
         self._logger.info( 'Stopping OmniSharp server with PID {0}'.format(
                                self._omnisharp_phandle.pid ) )
-        self._GetResponse( '/stopserver' )
         try:
+          self._GetResponse( '/stopserver' )
           utils.WaitUntilProcessIsTerminated( self._omnisharp_phandle,
                                               timeout = 5 )
           self._logger.info( 'OmniSharp server stopped' )
-        except RuntimeError:
+        except Exception:
           self._logger.exception( 'Error while stopping OmniSharp server' )
 
       self._CleanUp()
@@ -450,15 +423,11 @@ class CsharpSolutionCompleter( object ):
     return self._GetResponse( '/reloadsolution' )
 
 
-  def CompletionType( self, request_data ):
-    return ForceSemanticCompletion( request_data )
-
-
-  def _GetCompletions( self, request_data, completion_type ):
+  def _GetCompletions( self, request_data ):
     """ Ask server for completions """
     parameters = self._DefaultParameters( request_data )
-    parameters[ 'WantImportableTypes' ] = completion_type
-    parameters[ 'ForceSemanticCompletion' ] = completion_type
+    parameters[ 'WantImportableTypes' ] = request_data[ 'force_semantic' ]
+    parameters[ 'ForceSemanticCompletion' ] = request_data[ 'force_semantic' ]
     parameters[ 'WantDocumentationForEveryCompletionResult' ] = True
     completions = self._GetResponse( '/autocomplete', parameters )
     return completions if completions is not None else []
@@ -600,17 +569,17 @@ class CsharpSolutionCompleter( object ):
 
   def _GetResponse( self, handler, parameters = {}, timeout = None ):
     """ Handle communication with server """
-    target = urllib.parse.urljoin( self._ServerLocation(), handler )
+    target = urljoin( self._ServerLocation(), handler )
     response = requests.post( target, data = parameters, timeout = timeout )
     return response.json()
 
 
   def _ChooseOmnisharpPort( self ):
     if not self._omnisharp_port:
-        if self._desired_omnisharp_port:
-            self._omnisharp_port = int( self._desired_omnisharp_port )
-        else:
-            self._omnisharp_port = utils.GetUnusedLocalhostPort()
+      if self._desired_omnisharp_port:
+        self._omnisharp_port = int( self._desired_omnisharp_port )
+      else:
+        self._omnisharp_port = utils.GetUnusedLocalhostPort()
     self._logger.info( u'using port {0}'.format( self._omnisharp_port ) )
 
 
@@ -694,9 +663,13 @@ def _IndexToLineColumn( text, index ):
 
 
 def _BuildLocation( request_data, filename, line_num, column_num ):
-  if line_num <= 0 or column_num <= 0:
+  if line_num <= 0:
     return None
-  contents = utils.SplitLines( GetFileContents( request_data, filename ) )
+  # OmniSharp sometimes incorrectly returns 0 for the column number. Assume the
+  # column is 1 in that case.
+  if column_num <= 0:
+    column_num = 1
+  contents = GetFileLines( request_data, filename )
   line_value = contents[ line_num - 1 ]
   return responses.Location(
       line_num,

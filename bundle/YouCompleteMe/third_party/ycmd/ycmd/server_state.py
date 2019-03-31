@@ -19,15 +19,14 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 import os
 import threading
 import logging
 from future.utils import itervalues
-from ycmd.utils import ForceSemanticCompletion, LoadPythonSource
+from ycmd.utils import LoadPythonSource
 from ycmd.completers.general.general_completer_store import (
     GeneralCompleterStore )
 from ycmd.completers.completer_utils import PathToFiletypeCompleterPluginLoader
@@ -38,7 +37,7 @@ _logger = logging.getLogger( __name__ )
 class ServerState( object ):
   def __init__( self, user_options ):
     self._user_options = user_options
-    self._filetype_completers = dict()
+    self._filetype_completers = {}
     self._filetype_completers_lock = threading.Lock()
     self._gencomp = GeneralCompleterStore( self._user_options )
 
@@ -66,7 +65,7 @@ class ServerState( object ):
 
       module_path = PathToFiletypeCompleterPluginLoader( filetype )
       completer = None
-      supported_filetypes = set( [ filetype ] )
+      supported_filetypes = { filetype }
       if os.path.exists( module_path ):
         module = LoadPythonSource( filetype, module_path )
         completer = module.GetCompleter( self._user_options )
@@ -74,7 +73,8 @@ class ServerState( object ):
           supported_filetypes.update( completer.SupportedFiletypes() )
 
       for supported_filetype in supported_filetypes:
-        self._filetype_completers[ supported_filetype ] = completer
+        if supported_filetype not in self._filetype_completers:
+          self._filetype_completers[ supported_filetype ] = completer
       return completer
 
 
@@ -92,8 +92,8 @@ class ServerState( object ):
 
   def GetLoadedFiletypeCompleters( self ):
     with self._filetype_completers_lock:
-      return set( [ completer for completer in
-                    itervalues( self._filetype_completers ) if completer ] )
+      return { completer for completer in
+               itervalues( self._filetype_completers ) if completer }
 
 
   def FiletypeCompletionAvailable( self, filetypes ):
@@ -111,31 +111,20 @@ class ServerState( object ):
 
 
   def ShouldUseFiletypeCompleter( self, request_data ):
-    """
-    Determines whether or not the semantic completer should be called, and
-    returns an indication of the reason why. Specifically, returns a tuple:
-    ( should_use_completer_now, was_semantic_completion_forced ), where:
-     - should_use_completer_now: if True, the semantic engine should be used
-     - was_semantic_completion_forced: if True, the user requested "forced"
-                                       semantic completion
-    was_semantic_completion_forced is always False if should_use_completer_now
-    is False
-    """
+    """Determines whether or not the semantic completer should be called."""
     filetypes = request_data[ 'filetypes' ]
-    if self.FiletypeCompletionUsable( filetypes ):
-      if ForceSemanticCompletion( request_data ):
-        # use semantic, and it was forced
-        return ( True, True )
-      else:
-        # was not forced. check the conditions for triggering
-        return (
-          self.GetFiletypeCompleter( filetypes ).ShouldUseNow( request_data ),
-          False
-        )
+    if not self.FiletypeCompletionUsable( filetypes ):
+      # don't use semantic, ignore whether or not the user requested forced
+      # completion
+      return False
 
-    # don't use semantic, ignore whether or not the user requested forced
-    # completion
-    return ( False, False )
+    if request_data[ 'force_semantic' ]:
+      # use semantic, and it was forced
+      return True
+
+    # was not forced. check the conditions for triggering
+    return self.GetFiletypeCompleter( filetypes ).ShouldUseNow(
+      request_data )
 
 
   def GetGeneralCompleter( self ):
@@ -148,4 +137,4 @@ class ServerState( object ):
     if '*' in filetype_to_disable:
       return False
     else:
-      return not all([ x in filetype_to_disable for x in current_filetypes ])
+      return not all( x in filetype_to_disable for x in current_filetypes )

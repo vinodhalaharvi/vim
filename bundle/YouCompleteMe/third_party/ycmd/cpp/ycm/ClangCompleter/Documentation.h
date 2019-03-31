@@ -28,7 +28,7 @@ namespace YouCompleteMe {
 /// for a given cursor
 struct DocumentationData {
   /// Construct an empty object
-  DocumentationData() {}
+  DocumentationData() = default;
 
   /// Construct and extract information from the supplied cursor. The cursor
   /// should be pointing to a canonical declaration, such as returned by
@@ -47,6 +47,15 @@ struct DocumentationData {
   std::string canonical_type;
   /// The display name of the referenced cursor
   std::string display_name;
+
+  bool operator == ( const DocumentationData &other ) const {
+    return comment_xml == other.comment_xml &&
+           raw_comment == other.raw_comment &&
+           brief_comment == other.brief_comment &&
+           canonical_type == other.canonical_type &&
+           display_name == other.display_name;
+  }
+
 };
 
 } // namespace YouCompleteMe

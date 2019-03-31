@@ -19,12 +19,11 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
-from ycmd.completers.python.jedi_completer import JediCompleter
+from ycmd.completers.python.python_completer import PythonCompleter
 
 
 def GetCompleter( user_options ):
-  return JediCompleter( user_options )
+  return PythonCompleter( user_options )

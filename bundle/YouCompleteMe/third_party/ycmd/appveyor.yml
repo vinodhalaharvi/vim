@@ -1,35 +1,32 @@
 version: '{build}'
-branches:
-  # Since Homu does not support AppVeyor, we ignore the branch it uses.
-  except:
-    - auto
 environment:
   USE_CLANG_COMPLETER: true
   COVERAGE: true
   matrix:
-  # We only test MSVC 11 and 12 with Python 3.5 on 64 bits.
-  - msvc: 11
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     arch: 64
-    python: 35
-  - msvc: 12
-    arch: 64
-    python: 35
-  - msvc: 14
+    python: 37
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     arch: 32
-    python: 35
-  # We only test Python 2.7 with MSVC 14 on 64 bits.
-  - msvc: 14
+    python: 37
+  # We only test Python 2.7 with MSVC 15 on 64-bit.
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     arch: 64
     python: 27
-  - msvc: 14
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     arch: 64
-    python: 35
+    python: 37
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    arch: 64
+    python: 37
+    YCM_BENCHMARK: true
+    COVERAGE: false
 install:
   - ci\appveyor\appveyor_install.bat
 build_script:
-  - python run_tests.py --msvc %MSVC%
+  - ci\appveyor\appveyor_build.bat
 after_build:
-  - codecov
+  - if %COVERAGE% == true ( codecov )
 # Disable automatic tests
 test: off
 cache:
@@ -38,3 +35,5 @@ cache:
   - '%USERPROFILE%\.cargo'  # Cargo package deps
   - '%APPVEYOR_BUILD_FOLDER%\clang_archives'  # Clang downloads
   - '%APPVEYOR_BUILD_FOLDER%\third_party\racerd\target'  # Racerd compilation
+     # jdt.ls download
+  - '%APPVEYOR_BUILD_FOLDER%\third_party\eclipse.jdt.ls\target\cache'

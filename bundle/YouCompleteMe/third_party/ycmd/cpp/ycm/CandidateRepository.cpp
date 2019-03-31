@@ -1,4 +1,4 @@
-// Copyright (C) 2011, 2012 Google Inc.
+// Copyright (C) 2011-2018 ycmd contributors
 //
 // This file is part of ycmd.
 //
@@ -17,11 +17,9 @@
 
 #include "CandidateRepository.h"
 #include "Candidate.h"
-#include "standard.h"
 #include "Utils.h"
 
-#include <boost/thread/locks.hpp>
-#include <boost/algorithm/string.hpp>
+#include <mutex>
 
 #ifdef USE_CLANG_COMPLETER
 #  include "ClangCompleter/CompletionData.h"
@@ -33,28 +31,19 @@ namespace {
 
 // We set a reasonable max limit to prevent issues with huge candidate strings
 // entering the database. Such large candidates are almost never desirable.
-const int MAX_CANDIDATE_SIZE = 80;
+const size_t MAX_CANDIDATE_SIZE = 80;
 
 }  // unnamed namespace
 
 
-boost::mutex CandidateRepository::singleton_mutex_;
-CandidateRepository *CandidateRepository::instance_ = NULL;
-
 CandidateRepository &CandidateRepository::Instance() {
-  boost::lock_guard< boost::mutex > locker( singleton_mutex_ );
-
-  if ( !instance_ ) {
-    static CandidateRepository repo;
-    instance_ = &repo;
-  }
-
-  return *instance_;
+  static CandidateRepository repo;
+  return repo;
 }
 
 
-int CandidateRepository::NumStoredCandidates() {
-  boost::lock_guard< boost::mutex > locker( holder_mutex_ );
+size_t CandidateRepository::NumStoredCandidates() {
+  std::lock_guard< std::mutex > locker( candidate_holder_mutex_ );
   return candidate_holder_.size();
 }
 
@@ -65,72 +54,40 @@ std::vector< const Candidate * > CandidateRepository::GetCandidatesForStrings(
   candidates.reserve( strings.size() );
 
   {
-    boost::lock_guard< boost::mutex > locker( holder_mutex_ );
+    std::lock_guard< std::mutex > locker( candidate_holder_mutex_ );
 
-    foreach ( const std::string & candidate_text, strings ) {
+    for ( const std::string & candidate_text : strings ) {
       const std::string &validated_candidate_text =
         ValidatedCandidateText( candidate_text );
 
-      const Candidate *&candidate = GetValueElseInsert(
-                                      candidate_holder_,
-                                      validated_candidate_text,
-                                      NULL );
+      std::unique_ptr< Candidate > &candidate = GetValueElseInsert(
+                                                  candidate_holder_,
+                                                  validated_candidate_text,
+                                                  nullptr );
 
-      if ( !candidate )
-        candidate = new Candidate( validated_candidate_text );
+      if ( !candidate ) {
+        candidate.reset( new Candidate( validated_candidate_text ) );
+      }
 
-      candidates.push_back( candidate );
+      candidates.push_back( candidate.get() );
     }
   }
 
   return candidates;
 }
 
-#ifdef USE_CLANG_COMPLETER
 
-std::vector< const Candidate * > CandidateRepository::GetCandidatesForStrings(
-  const std::vector< CompletionData > &datas ) {
-  std::vector< const Candidate * > candidates;
-  candidates.reserve( datas.size() );
-
-  {
-    boost::lock_guard< boost::mutex > locker( holder_mutex_ );
-
-    foreach ( const CompletionData & data, datas ) {
-      const std::string &validated_candidate_text =
-        ValidatedCandidateText( data.original_string_ );
-
-      const Candidate *&candidate = GetValueElseInsert(
-                                      candidate_holder_,
-                                      validated_candidate_text,
-                                      NULL );
-
-      if ( !candidate )
-        candidate = new Candidate( validated_candidate_text );
-
-      candidates.push_back( candidate );
-    }
-  }
-
-  return candidates;
-}
-
-#endif // USE_CLANG_COMPLETER
-
-CandidateRepository::~CandidateRepository() {
-  foreach ( const CandidateHolder::value_type & pair,
-            candidate_holder_ ) {
-    delete pair.second;
-  }
+void CandidateRepository::ClearCandidates() {
+  candidate_holder_.clear();
 }
 
 
 // Returns a ref to empty_ if candidate not valid.
 const std::string &CandidateRepository::ValidatedCandidateText(
   const std::string &candidate_text ) {
-  if ( candidate_text.size() <= MAX_CANDIDATE_SIZE &&
-       IsPrintable( candidate_text ) )
+  if ( candidate_text.size() <= MAX_CANDIDATE_SIZE ) {
     return candidate_text;
+  }
 
   return empty_;
 }

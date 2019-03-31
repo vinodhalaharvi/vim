@@ -1,6 +1,6 @@
 # encoding: utf-8
 #
-# Copyright (C) 2016  ycmd contributors.
+# Copyright (C) 2016-2018 ycmd contributors.
 #
 # This file is part of ycmd.
 #
@@ -21,8 +21,7 @@
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
 import os
@@ -30,8 +29,11 @@ import subprocess
 import tempfile
 import ycm_core
 from future.utils import native
+from hamcrest import ( assert_that, calling, equal_to, has_property,
+                       instance_of, raises )
 from mock import patch, call
-from nose.tools import eq_, ok_, raises
+from nose.tools import eq_, ok_
+from types import ModuleType
 from ycmd import utils
 from ycmd.tests.test_utils import ( Py2Only, Py3Only, WindowsOnly, UnixOnly,
                                     CurrentWorkingDirectory,
@@ -201,14 +203,16 @@ def JoinLinesAsUnicode_Str_test():
 
 
 def JoinLinesAsUnicode_EmptyList_test():
-  value = utils.JoinLinesAsUnicode( [ ] )
+  value = utils.JoinLinesAsUnicode( [] )
   eq_( value, u'' )
   ok_( isinstance( value, str ) )
 
 
-@raises( ValueError )
 def JoinLinesAsUnicode_BadInput_test():
-  utils.JoinLinesAsUnicode( [ 42 ] )
+  assert_that(
+    calling( utils.JoinLinesAsUnicode ).with_args( [ 42 ] ),
+    raises( ValueError, 'lines must contain either strings or bytes' )
+  )
 
 
 @Py2Only
@@ -403,6 +407,41 @@ def PathsToAllParentFolders_WindowsPath_test():
   ], list( utils.PathsToAllParentFolders( r'C:\\foo\\goo\\zoo\\test.c' ) ) )
 
 
+def PathLeftSplit_test():
+  # Tuples of ( path, expected_result ) for utils.PathLeftSplit.
+  tests = [
+    ( '',              ( '', '' ) ),
+    ( 'foo',           ( 'foo', '' ) ),
+    ( 'foo/bar',       ( 'foo', 'bar' ) ),
+    ( 'foo/bar/xyz',   ( 'foo', 'bar/xyz' ) ),
+    ( 'foo/bar/xyz/',  ( 'foo', 'bar/xyz' ) ),
+    ( '/',             ( '/', '' ) ),
+    ( '/foo',          ( '/', 'foo' ) ),
+    ( '/foo/bar',      ( '/', 'foo/bar' ) ),
+    ( '/foo/bar/xyz',  ( '/', 'foo/bar/xyz' ) ),
+    ( '/foo/bar/xyz/', ( '/', 'foo/bar/xyz' ) )
+  ]
+  for test in tests:
+    yield lambda test: eq_( utils.PathLeftSplit( test[ 0 ] ), test[ 1 ] ), test
+
+
+@WindowsOnly
+def PathLeftSplit_Windows_test():
+  # Tuples of ( path, expected_result ) for utils.PathLeftSplit.
+  tests = [
+    ( 'foo\\bar',            ( 'foo', 'bar' ) ),
+    ( 'foo\\bar\\xyz',       ( 'foo', 'bar\\xyz' ) ),
+    ( 'foo\\bar\\xyz\\',     ( 'foo', 'bar\\xyz' ) ),
+    ( 'C:\\',                ( 'C:\\', '' ) ),
+    ( 'C:\\foo',             ( 'C:\\', 'foo' ) ),
+    ( 'C:\\foo\\bar',        ( 'C:\\', 'foo\\bar' ) ),
+    ( 'C:\\foo\\bar\\xyz',   ( 'C:\\', 'foo\\bar\\xyz' ) ),
+    ( 'C:\\foo\\bar\\xyz\\', ( 'C:\\', 'foo\\bar\\xyz' ) )
+  ]
+  for test in tests:
+    yield lambda test: eq_( utils.PathLeftSplit( test[ 0 ] ), test[ 1 ] ), test
+
+
 def OpenForStdHandle_PrintDoesntThrowException_test():
   try:
     temp = PathToTestFile( 'open-for-std-handle' )
@@ -492,16 +531,17 @@ def SplitLines_test():
     ( ' \n', [ ' ', '' ] ),
     ( ' \n ', [ ' ', ' ' ] ),
     ( 'test\n', [ 'test', '' ] ),
-    ( '\r', [ '', '' ] ),
-    ( '\r ', [ '', ' ' ] ),
-    ( 'test\r', [ 'test', '' ] ),
-    ( '\n\r', [ '', '', '' ] ),
-    ( '\r\n', [ '', '' ] ),
-    ( '\r\n\n', [ '', '', '' ] ),
-    # Other behaviors are just the behavior of splitlines, so just a couple of
-    # tests to prove that we don't mangle it.
+    # Ignore \r on purpose.
+    ( '\r', [ '\r' ] ),
+    ( '\r ', [ '\r ' ] ),
+    ( 'test\r', [ 'test\r' ] ),
+    ( '\n\r', [ '', '\r' ] ),
+    ( '\r\n', [ '\r', '' ] ),
+    ( '\r\n\n', [ '\r', '', '' ] ),
     ( 'test\ntesting', [ 'test', 'testing' ] ),
     ( '\ntesting', [ '', 'testing' ] ),
+    # Do not split lines on \f and \v characters.
+    ( '\f\n\v', [ '\f', '\v' ] )
   ]
 
   for test in tests:
@@ -548,6 +588,26 @@ def FindExecutable_AdditionalPathExt_test():
     eq_( executable, utils.FindExecutable( executable ) )
 
 
+@patch( 'ycmd.utils.ProcessIsRunning', return_value = True )
+def WaitUntilProcessIsTerminated_TimedOut_test( *args ):
+  assert_that(
+    calling( utils.WaitUntilProcessIsTerminated ).with_args( None,
+                                                             timeout = 0 ),
+    raises( RuntimeError,
+            'Waited process to terminate for 0 seconds, aborting.' )
+  )
+
+
+def LoadPythonSource_UnicodePath_test():
+  filename = PathToTestFile( u'uni¢𐍈d€.py' )
+  module = utils.LoadPythonSource( 'module_name', filename )
+  assert_that( module, instance_of( ModuleType ) )
+  assert_that( module.__file__, equal_to( filename ) )
+  assert_that( module.__name__, equal_to( 'module_name' ) )
+  assert_that( module, has_property( 'SomeMethod' ) )
+  assert_that( module.SomeMethod(), equal_to( True ) )
+
+
 @Py2Only
 def GetCurrentDirectory_Py2NoCurrentDirectory_test():
   with patch( 'os.getcwdu', side_effect = OSError ):
@@ -558,3 +618,14 @@ def GetCurrentDirectory_Py2NoCurrentDirectory_test():
 def GetCurrentDirectory_Py3NoCurrentDirectory_test():
   with patch( 'os.getcwd', side_effect = FileNotFoundError ): # noqa
     eq_( utils.GetCurrentDirectory(), tempfile.gettempdir() )
+
+
+def HashableDict_Equality_test():
+  dict1 = { 'key': 'value' }
+  dict2 = { 'key': 'another_value' }
+  ok_( utils.HashableDict( dict1 ) == utils.HashableDict( dict1 ) )
+  ok_( not utils.HashableDict( dict1 ) != utils.HashableDict( dict1 ) )
+  ok_( not utils.HashableDict( dict1 ) == dict1 )
+  ok_( utils.HashableDict( dict1 ) != dict1 )
+  ok_( not utils.HashableDict( dict1 ) == utils.HashableDict( dict2 ) )
+  ok_( utils.HashableDict( dict1 ) != utils.HashableDict( dict2 ) )

@@ -1,5 +1,4 @@
-# Copyright (C) 2013 Google Inc.
-#               2015 ycmd contributors
+# Copyright (C) 2013-2018 ycmd contributors
 #
 # This file is part of ycmd.
 #
@@ -21,12 +20,10 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
-from future import standard_library
-from future.utils import iteritems
-standard_library.install_aliases()
+# Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
-from future.utils import PY2
+from future.utils import iteritems, PY2
 from hamcrest import contains_string, has_entry, has_entries, assert_that
 from mock import patch
 from webtest import TestApp
@@ -38,17 +35,24 @@ import os
 import tempfile
 import time
 import stat
+import shutil
 
-from ycmd import handlers, user_options_store
+from ycmd import extra_conf_store, handlers, user_options_store
 from ycmd.completers.completer import Completer
 from ycmd.responses import BuildCompletionData
-from ycmd.utils import GetCurrentDirectory, OnMac, OnWindows, ToUnicode
+from ycmd.utils import ( GetCurrentDirectory,
+                         OnMac,
+                         OnWindows,
+                         ToUnicode,
+                         WaitUntilProcessIsTerminated )
 import ycm_core
 
 try:
   from unittest import skipIf
 except ImportError:
   from unittest2 import skipIf
+
+TESTS_DIR = os.path.abspath( os.path.dirname( __file__ ) )
 
 Py2Only = skipIf( not PY2, 'Python 2 only' )
 Py3Only = skipIf( PY2, 'Python 3 only' )
@@ -63,6 +67,7 @@ def BuildRequest( **kwargs ):
   filepath = kwargs[ 'filepath' ] if 'filepath' in kwargs else '/foo'
   contents = kwargs[ 'contents' ] if 'contents' in kwargs else ''
   filetype = kwargs[ 'filetype' ] if 'filetype' in kwargs else 'foo'
+  filetypes = kwargs[ 'filetypes' ] if 'filetypes' in kwargs else [ filetype ]
 
   request = {
     'line_num': 1,
@@ -71,7 +76,7 @@ def BuildRequest( **kwargs ):
     'file_data': {
       filepath: {
         'contents': contents,
-        'filetypes': [ filetype ]
+        'filetypes': filetypes
       }
     }
   }
@@ -87,6 +92,12 @@ def BuildRequest( **kwargs ):
       request[ key ] = value
 
   return request
+
+
+def CombineRequest( request, data ):
+  kwargs = request.copy()
+  kwargs.update( data )
+  return BuildRequest( **kwargs )
 
 
 def ErrorMatcher( cls, msg = None ):
@@ -131,6 +142,13 @@ def LocationMatcher( filepath, line_num, column_num ):
   } )
 
 
+def RangeMatcher( filepath, start, end ):
+  return has_entries( {
+    'start': LocationMatcher( filepath, *start ),
+    'end': LocationMatcher( filepath, *end ),
+  } )
+
+
 def ChunkMatcher( replacement_text, start, end ):
   return has_entries( {
     'replacement_text': replacement_text,
@@ -157,18 +175,6 @@ def PatchCompleter( completer, filetype ):
 
 
 @contextlib.contextmanager
-def UserOption( key, value ):
-  try:
-    current_options = dict( user_options_store.GetAll() )
-    user_options = current_options.copy()
-    user_options.update( { key: value } )
-    handlers.UpdateUserOptions( user_options )
-    yield user_options
-  finally:
-    handlers.UpdateUserOptions( current_options )
-
-
-@contextlib.contextmanager
 def CurrentWorkingDirectory( path ):
   old_cwd = GetCurrentDirectory()
   os.chdir( path )
@@ -187,10 +193,43 @@ def TemporaryExecutable( extension = '.exe' ):
     yield executable.name
 
 
-def SetUpApp():
+@contextlib.contextmanager
+def TemporarySymlink( source, link ):
+  os.symlink( source, link )
+  try:
+    yield
+  finally:
+    os.remove( link )
+
+
+def SetUpApp( custom_options = {} ):
   bottle.debug( True )
-  handlers.SetServerStateToDefaults()
+  options = user_options_store.DefaultOptions()
+  options.update( custom_options )
+  handlers.UpdateUserOptions( options )
+  extra_conf_store.Reset()
   return TestApp( handlers.app )
+
+
+@contextlib.contextmanager
+def IgnoreExtraConfOutsideTestsFolder():
+  with patch( 'ycmd.utils.IsRootDirectory',
+              lambda path, parent: path in [ parent, TESTS_DIR ] ):
+    yield
+
+
+@contextlib.contextmanager
+def IsolatedApp( custom_options = {} ):
+  old_server_state = handlers._server_state
+  old_extra_conf_store_state = extra_conf_store.Get()
+  old_options = user_options_store.GetAll()
+  try:
+    with IgnoreExtraConfOutsideTestsFolder():
+      yield SetUpApp( custom_options )
+  finally:
+    handlers._server_state = old_server_state
+    extra_conf_store.Set( old_extra_conf_store_state )
+    user_options_store.SetAll( old_options )
 
 
 def StartCompleterServer( app, filetype, filepath = '/foo' ):
@@ -208,20 +247,23 @@ def StopCompleterServer( app, filetype, filepath = '/foo' ):
                  expect_errors = True )
 
 
-def WaitUntilCompleterServerReady( app, filetype ):
-  retries = 100
+def WaitUntilCompleterServerReady( app, filetype, timeout = 30 ):
+  expiration = time.time() + timeout
+  while True:
+    if time.time() > expiration:
+      raise RuntimeError( 'Waited for the {0} subserver to be ready for '
+                          '{1} seconds, aborting.'.format( filetype, timeout ) )
 
-  while retries > 0:
-    result = app.get( '/ready', { 'subserver': filetype } ).json
-    if result:
+    if app.get( '/ready', { 'subserver': filetype } ).json:
       return
 
-    time.sleep( 0.2 )
-    retries = retries - 1
+    time.sleep( 0.1 )
 
-  raise RuntimeError(
-    'Timeout waiting for "{0}" filetype completer'.format( filetype ) )
 
+def MockProcessTerminationTimingOut( handle, timeout = 5 ):
+  WaitUntilProcessIsTerminated( handle, timeout )
+  raise RuntimeError( 'Waited process to terminate for {0} seconds, '
+                      'aborting.'.format( timeout ) )
 
 
 def ClearCompletionsCache():
@@ -299,3 +341,38 @@ def ExpectedFailure( reason, *exception_matchers ):
     return Wrapper
 
   return decorator
+
+
+@contextlib.contextmanager
+def TemporaryTestDir():
+  """Context manager to execute a test with a temporary workspace area. The
+  workspace is deleted upon completion of the test. This is useful particularly
+  for testing project detection (e.g. compilation databases, etc.), by ensuring
+  that the directory is empty and not affected by the user's filesystem."""
+  tmp_dir = tempfile.mkdtemp()
+  try:
+    yield tmp_dir
+  finally:
+    shutil.rmtree( tmp_dir )
+
+
+def WithRetry( test ):
+  """Decorator to be applied to tests that retries the test over and over
+  until it passes or |timeout| seconds have passed."""
+
+  if 'YCM_TEST_NO_RETRY' in os.environ:
+    return test
+
+  @functools.wraps( test )
+  def wrapper( *args, **kwargs ):
+    expiry = time.time() + 30
+    while True:
+      try:
+        test( *args, **kwargs )
+        return
+      except Exception as test_exception:
+        if time.time() > expiry:
+          raise
+        print( 'Test failed, retrying: {0}'.format( str( test_exception ) ) )
+        time.sleep( 0.25 )
+  return wrapper
