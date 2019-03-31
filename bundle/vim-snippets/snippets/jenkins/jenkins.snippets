@@ -1,0 +1,52 @@
+snippet steps
+	steps {
+		sh '${1:make check}'
+		junit '${2:reports/**/*.xml}' 
+	}
+	${0}
+
+snippet stage
+	stage('${1:Test}'){
+		steps {
+			sh '${2:make check}'
+			junit '${3:reports/**/*.xml}' 
+		}
+	}
+	${0}
+
+snippet pipeline
+	pipeline {
+		agent any 
+		stages {
+			stage('${1:Build}') { 
+				steps { 
+					sh '${2:make}' 
+				}
+			}
+		}
+	}
+	${0}
+
+snippet pipeline_sample
+	pipeline {
+		agent any 
+		stages {
+			stage('${1:Build}') { 
+				steps { 
+					sh '${2:make}' 
+				}
+			}
+			stage('${3:Test}'){
+				steps {
+					sh '${4:make check}'
+					junit '${5:reports/**/*.xml}' 
+				}
+			}
+			stage('${6:Deploy}') {
+				steps {
+					sh '${7:make publish}'
+				}
+			}
+		}
+	}
+	${0}
