@@ -526,7 +526,8 @@ vmap <C-s> <esc>:w<CR>gv
 "inoremap <C-q> <esc>:qa<cr>
 "nnoremap <C-q> :qa<cr>"
 "
-colorscheme mustang
+"colorscheme mustang
+colorscheme onedark
 
 " FZF.vim now supports this command out of the box
 " so this code is no longer needed.

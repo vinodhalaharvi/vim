@@ -80,26 +80,6 @@ snippet fmap
 	//returns []$1
 	Map(items, func(it $1) $1 {
 	})
-snippet functional_examples
-	func main() {
-		// Here we try out our various collection functions.
-		var strs = []string{"peach", "apple", "pear", "plum"}
-		fmt.Println(Index(strs, "pear"))
-		fmt.Println(Include(strs, "grape"))
-		fmt.Println(Any(strs, func(v string) bool {
-			return strings.HasPrefix(v, "p")
-		}))
-		fmt.Println(All(strs, func(v string) bool {
-			return strings.HasPrefix(v, "p")
-		}))
-		fmt.Println(Filter(strs, func(v string) bool {
-			return strings.Contains(v, "e")
-		}))
-		// The above examples all used anonymous functions,
-		// but you can also use named functions of the correct
-		// type.
-		fmt.Println(Map(strs, strings.ToUpper))
-	}
 snippet if_err_fatal
 	if err != nil {
 		log.Fatal(err)
@@ -165,6 +145,7 @@ snippet dispatcher
 		}()
 	}
 
+
 snippet json_encoder
 	c := struct{}{}
 	b, err := json.Marshal(&c)
@@ -203,7 +184,7 @@ snippet array_to_chan
 	}
 	$0
 
-snippet gaw
+snippet go_func_wait_group
 	var wg sync.WaitGroup
 	wg.Add(${1:count})
 	go func() {
@@ -348,38 +329,38 @@ snippet code_key_value_datastore
 
 	type DataStore struct {
 		sync.Mutex
-		cache map[string]string
+		cache map[string]${1:valueType}
 	}
 
-	func New() *DataStore {
+	func NewStore() *DataStore {
 		return &DataStore{
-			cache: make(map[string]string),
+			cache: make(map[string]$1),
 		}
 	}
 
-	func (ds *DataStore) set(key string, value string) {
+	func (ds *DataStore) set(key string, value $1) {
 		ds.cache[key] = value
 	}
 
-	func (ds *DataStore) get(key string) string {
+	func (ds *DataStore) get(key string) []byte {
 		if ds.count() > 0 {
 			item := ds.cache[key]
 			return item
 		}
-		return ""
+		return []byte("")
 	}
 
 	func (ds *DataStore) count() int {
 		return len(ds.cache)
 	}
 
-	func (ds *DataStore) Set(key string, value string) {
+	func (ds *DataStore) Set(key string, value $1) {
 		ds.Lock()
 		defer ds.Unlock()
 		ds.set(key, value)
 	}
 
-	func (ds *DataStore) Get(key string) string {
+	func (ds *DataStore) Get(key string) $1 {
 		ds.Lock()
 		defer ds.Unlock()
 		return ds.get(key)
@@ -392,7 +373,7 @@ snippet code_key_value_datastore
 	}
 
 	func main() {
-		store := New()
+		store := NewStore()
 		for i := 0; i < 10000000; i++ {
 			store.Set("Go", "Lang")
 			store.Get("Go")
@@ -518,6 +499,22 @@ snippet code_websocket_server
 
 
 
+snippet stream_to_byte
+	import "bytes"
+
+	func StreamToByte(stream io.Reader) []byte {
+	  buf := new(bytes.Buffer)
+		buf.ReadFrom(stream)
+		return buf.Bytes()
+	}
+
+snippet stream_to_string
+	func StreamToString(stream io.Reader) string {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(stream)
+		return buf.String()
+	}
+
 snippet code_web_socket_client
 	<!DOCTYPE html>
 	<html lang="en">
@@ -619,44 +616,360 @@ snippet code_web_socket_client
 	</html>
 
 
-snippet code_aws_service
-	type ${1:Kinesis} struct {
-		sess Session
-		svc  *$1
+snippet grpc_hello_client
+	package main
+
+	import (
+		"context"
+		"log"
+		"os"
+		"time"
+
+		"google.golang.org/grpc"
+		pb "google.golang.org/grpc/examples/helloworld/helloworld"
+	)
+
+	const (
+		address     = "localhost:50051"
+		defaultName = "world"
+	)
+
+	func main() {
+		// Set up a connection to the server.
+		conn, err := grpc.Dial(address, grpc.WithInsecure())
+		if err != nil {
+			log.Fatalf("did not connect: %v", err)
+		}
+		defer conn.Close()
+		c := pb.NewGreeterClient(conn)
+
+		// Contact the server and print out its response.
+		name := defaultName
+		if len(os.Args) > 1 {
+			name = os.Args[1]
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		r, err := c.SayHello(ctx, &pb.HelloRequest{Name: name})
+		if err != nil {
+			log.Fatalf("could not greet: %v", err)
+		}
+		log.Printf("Greeting: %s", r.Message)
 	}
 
-	func new$1Service() {
-		sess := session.Must(session.NewSessionWithOptions(session.Options{
-			Config:  aws.Config{Region: aws.String("us-east-1")},
-			Profile: profileName,
-		}))
-		svc := ${2:kinesis}.New(sess, &aws.Config{Region: aws.String(awsRegion)})
-		return &$1{
-			sess: sess,
-			svc:  svc,
-		}
+snippet grpc_hello_server
+	package main
+
+	import (
+		"context"
+		"log"
+		"net"
+
+		"google.golang.org/grpc"
+		pb "google.golang.org/grpc/examples/helloworld/helloworld"
+	)
+
+	const (
+		port = ":50051"
+	)
+
+	// server is used to implement helloworld.GreeterServer.
+	type server struct{}
+
+	// SayHello implements helloworld.GreeterServer
+	func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
+		log.Printf("Received: %v", in.Name)
+		return &pb.HelloReply{Message: "Hello " + in.Name}, nil
 	}
 
 	func main() {
-		this := new$1Service()
-	}
-
-snippet code_aws_service_resource_request
-	func (this *${1:Kinesis}) ${2:getRecords}() error {
-		params := &${3:kinesis}.${4:GetRecords}Input{
+		lis, err := net.Listen("tcp", port)
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
 		}
-		req, resp := this.svc.$4Request(params)
-		err := req.Send()
-		check(err)
-		return resp
-	}
-
-
-snippet code_aws_service_resource
-	func (this *${1:Kinesis}) ${2:method}() error {
-		params := &${3:kinesis}.${4:GetRecords}Input{
+		s := grpc.NewServer()
+		pb.RegisterGreeterServer(s, &server{})
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
 		}
-		output, err := this.svc.$4(params)
-		check(err)
-		return output
 	}
+
+snippet grpc_routeguide_server_getfeature
+	func (s *routeGuideServer) GetFeature(ctx context.Context, point *pb.Point) (*pb.Feature, error) {
+		for _, feature := range s.savedFeatures {
+			if proto.Equal(feature.Location, point) {
+				return feature, nil
+			}
+		}
+		return &pb.Feature{Location: point}, nil
+	}
+
+snippet grpc_routeguide_server_listfeatures
+	func (s *routeGuideServer) ListFeatures(rect *pb.Rectangle, stream pb.RouteGuide_ListFeaturesServer) error {
+		for _, feature := range s.savedFeatures {
+			if inRange(feature.Location, rect) {
+				if err := stream.Send(feature); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+snippet grpc_routeguide_server_recordroute
+	func (s *routeGuideServer) RecordRoute(stream pb.RouteGuide_RecordRouteServer) error {
+		var pointCount, featureCount, distance int32
+		var lastPoint *pb.Point
+		startTime := time.Now()
+		for {
+			point, err := stream.Recv()
+			if err == io.EOF {
+				endTime := time.Now()
+				return stream.SendAndClose(&pb.RouteSummary{
+					PointCount:   pointCount,
+					FeatureCount: featureCount,
+					Distance:     distance,
+					ElapsedTime:  int32(endTime.Sub(startTime).Seconds()),
+				})
+			}
+			if err != nil {
+				return err
+			}
+			pointCount++
+			for _, feature := range s.savedFeatures {
+				if proto.Equal(feature.Location, point) {
+					featureCount++
+				}
+			}
+			if lastPoint != nil {
+				distance += calcDistance(lastPoint, point)
+			}
+			lastPoint = point
+		}
+	}
+
+snippet grpc_stream_receive
+	in, err := stream.Recv()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+snippet grpc_stream_for_receive
+	for { 
+		in, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+snippet grpc_stream_send
+	if err := stream.Send(note); err != nil {
+		return err
+	}
+
+
+snippet grpc_stream_for_send
+	${1:items} := make([]*data_type{Key: Value})
+	for _, note := range ${1} {
+		if err := stream.Send(note); err != nil {
+			return err
+		}
+	}
+snippet grpc_bidi_stream
+		for {
+
+			//ready to receive
+			in, err := stream.Recv()
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+
+			//initialize data, get data, set data
+ 
+			//ready to send
+			for it := items {
+				if err := stream.Send(it); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+snippet grpc_server_bidi_stream
+	func serialize(it *pb.DataType) string {
+		return fmt.Sprintf("%d %s", it.Id, it.Name)
+	}
+
+	func (s *server) SomeName(stream pb.RouteGuide_RouteChatServer) error {
+		for {
+			in, err := stream.Recv()
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			key := serialize(in.Id, in.Name)
+
+			s.mu.Lock()
+			s.routeNotes[key] = append(s.dataOfType[key], in)
+			items := make([]*pb.Type, len(s.dataOfType[key]))
+			copy(items, s.dataOfType[key])
+			s.mu.Unlock()
+
+			for _, note := range items {
+				if err := stream.Send(note); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+snippet read_in_json_file
+	var data []byte
+	if filePath != "" {
+		var err error
+		data, err = ioutil.ReadFile(filePath)
+		if err != nil {
+			log.Fatalf("Failed to load default features: %v", err)
+		}
+	}
+	if err := json.Unmarshal(data, &s.savedFeatures); err != nil {
+		log.Fatalf("Failed to load default features: %v", err)
+	}
+
+
+snippet grpc_server_tls
+	func main() {
+			flag.Parse()
+			lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
+			if err != nil {
+				log.Fatalf("failed to listen: %v", err)
+			}
+			var opts []grpc.ServerOption
+			if *tls {
+				if *certFile == "" {
+					*certFile = testdata.Path("server1.pem")
+				}
+				if *keyFile == "" {
+					*keyFile = testdata.Path("server1.key")
+				}
+				creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
+				if err != nil {
+					log.Fatalf("Failed to generate credentials %v", err)
+				}
+				opts = []grpc.ServerOption{grpc.Creds(creds)}
+			}
+			grpcServer := grpc.NewServer(opts...)
+			pb.RegisterRouteGuideServer(grpcServer, newServer())
+			grpcServer.Serve(lis)
+		}
+
+snippet grpc_routeguide_client_randompoint
+	func randomPoint(r *rand.Rand) *pb.Point {
+		lat := (r.Int31n(180) - 90) * 1e7
+		long := (r.Int31n(360) - 180) * 1e7
+		return &pb.Point{Latitude: lat, Longitude: long}
+	}
+
+
+snippet get_grpc_client_conn
+		conn, err := grpc.Dial(address, grpc.WithInsecure())
+		if err != nil {
+			log.Fatalf("did not connect: %v", err)
+		}
+		defer conn.Close()
+snippet get_grpc_client_context
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+snippet get_grpc_client_conn_context
+		conn, err := grpc.Dial(address, grpc.WithInsecure())
+		if err != nil {
+			log.Fatalf("did not connect: %v", err)
+		}
+		defer conn.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		c := pb.GrpcClientType(conn)
+snippet get_grpc_client_recv_stream
+		// client side grpc ${1:FunctionName}
+		stream, err := client.Grpc$1(ctx, in)
+		if err != nil {
+			log.Fatalf("%v.RecordRoute(_) = _, %v", client, err)
+		}
+		for {
+			feature, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("%v.ListFeatures(_) = _, %v", client, err)
+			}
+			log.Println(it)
+		}
+	}
+snippet get_grpc_client_send_stream
+		// client side grpc ${1:FunctionName}
+		stream, err := client.Grpc$1(ctx)
+		if err != nil {
+			log.Fatalf("%v.$1(_) = _, %v", client, err)
+		}
+		//
+		for it := items {
+			if err := stream.Send(it); err != nil {
+				log.Fatalf("%v.Send(%v) = %v", stream, it, err)
+			}
+		}
+		reply, err := stream.CloseAndRecv()
+		if err != nil {
+			log.Fatalf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
+		}
+		log.Printf("Reply from server: %v", reply)
+	}
+
+snippet get_grpc_client_bidi_stream
+	// client side grpc ${1:FunctionName}
+	func run$1(client pb.GrpcTypeClient) { 
+		items := []*pb.ItemType{}
+		ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+		defer cancel()
+		stream, err := client.$1(ctx)
+		if err != nil {
+			log.Fatalf("%v.$1(_) = _, %v", client, err)
+		}
+		waitc := make(chan struct{})
+		go func() {
+			for {
+				in, err := stream.Recv()
+				if err == io.EOF {
+					// read done.
+					close(waitc)
+					return
+				}
+				if err != nil {
+					log.Fatalf("Failed to receive a note : %v", err)
+				}
+				log.Printf("Got message %s at point(%d, %d)", in.Message, in.Location.Latitude, in.Location.Longitude)
+			}
+		}()
+		for _, note := range notes {
+			if err := stream.Send(note); err != nil {
+				log.Fatalf("Failed to send a note: %v", err)
+			}
+		}
+		stream.CloseSend()
+		<-waitc
+	}
+
+
+
+
