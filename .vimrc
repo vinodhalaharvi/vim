@@ -55,6 +55,7 @@ call plug#end()
 " Optional:
 Plugin 'emacs-helm/helm'
 "Plugin 'garbas/vim-snipmate'
+Plugin 'uarun/vim-protobuf'
 Bundle 'Lokaltog/vim-powerline'
 Bundle 'jQuery' 
 Bundle 'kana/vim-textobj-user'
@@ -406,9 +407,17 @@ let g:ycm_global_ycm_extra_conf = '~/.vim/bundle/YouCompleteMe/third_party/ycmd/
 
 " vim-go options
 let g:go_fmt_command = "goimports"
-let g:go_highlight_functions = 1
 let g:go_highlight_methods = 1
 let g:go_highlight_structs = 1
+let g:go_highlight_fields = 1
+let g:go_highlight_functions = 1
+"let g:go_fmt_fail_silently = 1
+let g:go_addtags_transform = "camelcase"
+let g:go_highlight_types = 1
+let g:go_highlight_function_calls = 1
+let g:go_highlight_operators = 1
+let g:go_highlight_build_constraints = 1
+let g:go_highlight_generate_tags = 1
 
 " YCM options after these other plugins (the defaults of vim-go changed somehow)
 set completeopt-=preview
@@ -526,7 +535,6 @@ vmap <C-s> <esc>:w<CR>gv
 "inoremap <C-q> <esc>:qa<cr>
 "nnoremap <C-q> :qa<cr>"
 "
-"colorscheme mustang
 colorscheme onedark
 
 " FZF.vim now supports this command out of the box
@@ -542,10 +550,19 @@ nnoremap <C-g> :Rg<Cr>
 set tags=tags
 
 
-"autocmd FileType go nmap <leader>b  <Plug>(go-build)
+autocmd FileType go nmap <leader>b  <Plug>(go-build)
 autocmd FileType go nmap <leader>r  <Plug>(go-run)
 autocmd FileType go nmap <leader>t  <Plug>(go-test)
 autocmd FileType go nmap <leader>tf  <Plug>(go-test)
+
+" Build/Test on save.
+augroup auto_go
+    autocmd!
+    autocmd BufWritePost *.go :GoBuild
+    autocmd BufWritePost *_test.go :GoTest
+augroup end
+let g:go_metalinter_autosave_enabled = ['vet', 'golint', 'test']
+
 
 " run :GoBuild or :GoTestCompile based on the go file
 function! s:build_go_files()
@@ -703,3 +720,9 @@ function! s:fzf_statusline()
 endfunction
 
 autocmd! User FzfStatusLine call <SID>fzf_statusline()
+
+autocmd FileType go nmap <Leader>i <Plug>(go-info)
+nnoremap <Leader>w <C-w><C-w>
+let g:go_auto_type_info = 1
+set updatetime=100
+"let g:go_auto_sameids = 1
