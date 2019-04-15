@@ -321,4 +321,264 @@ snippet example_grpc_server
 		}
 	}
 
+snippet example_grpc_server_bidi_stream
+	func serialize(it *pb.DataType) string {
+		return fmt.Sprintf("%d %s", it.Id, it.Name)
+	}
+
+	func (s *server) SomeName(stream pb.RouteGuide_RouteChatServer) error {
+		for {
+			in, err := stream.Recv()
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			key := serialize(in.Id, in.Name)
+
+			s.mu.Lock()
+			s.routeNotes[key] = append(s.dataOfType[key], in)
+			items := make([]*pb.Type, len(s.dataOfType[key]))
+			copy(items, s.dataOfType[key])
+			s.mu.Unlock()
+
+			for _, note := range items {
+				if err := stream.Send(note); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+
+
+
+snippet example_grpc_routeguide_server_getfeature
+	func (s *routeGuideServer) GetFeature(ctx context.Context, point *pb.Point) (*pb.Feature, error) {
+		for _, feature := range s.savedFeatures {
+			if proto.Equal(feature.Location, point) {
+				return feature, nil
+			}
+		}
+		return &pb.Feature{Location: point}, nil
+	}
+
+snippet example_grpc_routeguide_server_listfeatures
+	func (s *routeGuideServer) ListFeatures(rect *pb.Rectangle, stream pb.RouteGuide_ListFeaturesServer) error {
+		for _, feature := range s.savedFeatures {
+			if inRange(feature.Location, rect) {
+				if err := stream.Send(feature); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+snippet example_grpc_routeguide_server_recordroute
+	func (s *routeGuideServer) RecordRoute(stream pb.RouteGuide_RecordRouteServer) error {
+		var pointCount, featureCount, distance int32
+		var lastPoint *pb.Point
+		startTime := time.Now()
+		for {
+			point, err := stream.Recv()
+			if err == io.EOF {
+				endTime := time.Now()
+				return stream.SendAndClose(&pb.RouteSummary{
+					PointCount:   pointCount,
+					FeatureCount: featureCount,
+					Distance:     distance,
+					ElapsedTime:  int32(endTime.Sub(startTime).Seconds()),
+				})
+			}
+			if err != nil {
+				return err
+			}
+			pointCount++
+			for _, feature := range s.savedFeatures {
+				if proto.Equal(feature.Location, point) {
+					featureCount++
+				}
+			}
+			if lastPoint != nil {
+				distance += calcDistance(lastPoint, point)
+			}
+			lastPoint = point
+		}
+	}
+
+
+
+snippet example_code_websocket_server
+	//routes
+	type Route struct {
+		Name    string
+		Path    string
+		Handler http.Handler
+		Methods []string
+	}
+
+	var routes = []Route{
+		{
+			Name:    "HomeHandler",
+			Path:    "/",
+			Handler: new(HomeHandler),
+			Methods: []string{"GET", "POST"},
+		},
+		{
+			Name:    "WsHandler",
+			Path:    "/ws",
+			Handler: new(WsHandler),
+			Methods: []string{"GET", "POST"},
+		},
+	}
+
+	//helpers
+	func Logger(inner http.Handler, name string) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+
+			inner.ServeHTTP(w, r)
+
+			log.Printf(
+				"%s\t%s\t%s\t%s",
+				r.Method,
+				r.RequestURI,
+				name,
+				time.Since(start),
+			)
+		})
+	}
+
+	//handlers
+	//home handler
+	type HomeHandler struct{}
+
+	func (h *HomeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte("hello world out there !\n"))
+	}
+
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+
+	//web socket handler
+	type WsHandler struct{}
+
+	func (h *WsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+		// serveWs handles websocket requests from the peer.
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Printf("%s\n", conn)
+		//do something with conn here
+	}
+
+	//json handler
+	type JsonHandler struct{}
+
+	//your type goes in here
+	type JsonType struct{}
+
+	func (jh *JsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+		var jsonData JsonType
+		body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
+		if err != nil {
+			panic(err)
+		}
+		if err := r.Body.Close(); err != nil {
+			panic(err)
+		}
+		if err := json.Unmarshal(body, &jsonData); err != nil {
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			w.WriteHeader(422) // unprocessable entity
+			if err := json.NewEncoder(w).Encode(err); err != nil {
+				panic(err)
+			}
+		}
+
+		//do something with jsonData
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		w.WriteHeader(http.StatusCreated)
+		/*
+			//optionally write back some json data
+			if err := json.NewEncoder(w).Encode(jsonData); err != nil {
+				log.Fatal(err)
+			}
+		*/
+	}
+
+	func main() {
+		var router = mux.NewRouter()
+		for _, route := range routes {
+			router.
+				Methods(route.Methods...).
+				Path(route.Path).
+				Name(route.Name).
+				Handler(Logger(route.Handler, route.Name))
+
+		}
+		fmt.Printf("%s\n", "Server listening on :8000")
+		log.Fatal(http.ListenAndServe(":8000", router))
+	}
+
+
+
+snippet example_code_nested_structs
+	// nested struct definitions
+	type some struct {
+		s1      *some1
+		closeCh chan struct{}
+		doneCh  chan struct{}
+		others  []*other
+	}
+
+	type some1 struct {
+	}
+
+	type other struct {
+	}
+
+	func makeSome() *some {
+		return &some{
+			doneCh:  make(chan struct{}),
+			closeCh: make(chan struct{}),
+		}
+	}
+
+	func (b *some) makeSome1() {
+		b.s1 = &some1{}
+	}
+
+	func (b *some) makeOthers(numothers int) {
+		others := make([]*other, numothers)
+
+		for i := 0; i < numothers; i++ {
+			others[i] = &other{}
+		}
+		b.others = others
+	}
+
+	func (b *some) close() {
+		close(b.closeCh)
+	}
+
+	func (b *some) run() {
+		//do work in go routine and wait for done
+		<-b.doneCh
+	}
+
+	func main() {
+		b := makeSome()
+		b.makeSome1()
+		b.makeOthers(10)
+		fmt.Printf("%s\n", b)
+	}
+
+
 
