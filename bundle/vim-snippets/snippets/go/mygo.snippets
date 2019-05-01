@@ -549,4 +549,14 @@ snippet grpc_server
 		log.Fatalf("failed to serve: %v", err)
 	}
 
-
+snippet retry_using_timeout
+	const timeout = 30 * time.Second
+	deadline := time.Now().Add(timeout)
+	for tries := 0; time.Now().Before(deadline); tries++ {
+		//TODO your code here
+		log.Printf("r = %+v\n", r)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(time.Second << uint(tries)) // exponential back-off
+	}
