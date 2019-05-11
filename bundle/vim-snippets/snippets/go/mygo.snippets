@@ -194,6 +194,24 @@ snippet go_func_wait_group
 	wg.Wait()
 
 
+snippet go_func_done_errors
+	func ${1:functionName}(done <-chan interface{}) <-chan error {
+		errors := make(chan error)
+		go func() {
+			defer close(errors)
+			select {
+			case <-done:
+				return
+			default:
+				//do work here
+				$2
+			}
+		}()
+		return errors
+	}
+	$0
+
+
 snippet websocket_read_write
 	func ${1:functionName}(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
