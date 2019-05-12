@@ -1,0 +1,2023 @@
+snippet channel
+	package main
+
+	import (
+		"fmt"
+		"time"
+	)
+
+	func printCount(c chan int) {
+		num := 0
+		for num >= 0 {
+			num = <-c
+			fmt.Print(num, " ")
+		}
+	}
+
+	func main() {
+		c := make(chan int)
+		a := []int{8, 6, 7, 5, 3, 0, 9, -1}
+
+		go printCount(c)
+
+		for _, v := range a {
+			c <- v
+		}
+		time.Sleep(time.Millisecond * 1)
+		fmt.Println("End of main")
+	}
+
+snippet goroutine
+	package main
+
+	import (
+		"fmt"
+		"time"
+	)
+
+	func count() {
+		for i := 0; i < 5; i++ {
+			fmt.Println(i)
+			time.Sleep(time.Millisecond * 1)
+		}
+	}
+
+	func main() {
+		go count()
+		time.Sleep(time.Millisecond * 2)
+		fmt.Println("Hello World")
+		time.Sleep(time.Millisecond * 5)
+	}
+
+snippet hello
+	package main
+
+	import "fmt"
+
+	func getName() string {
+		return "World!"
+	}
+
+	func main() {
+		name := getName()
+		fmt.Println("Hello ", name)
+	}
+
+snippet hello_test
+	package main
+
+	import "testing"
+
+	func TestName(t *testing.T) {
+		name := getName()
+
+		if name != "World!" {
+			t.Error("Respone from getName is unexpected value")
+		}
+	}
+
+snippet http_get
+	package main
+
+	import (
+		"fmt"
+		"io/ioutil"
+		"net/http"
+	)
+
+	func main() {
+		resp, _ := http.Get("http://example.com/")
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(body))
+		resp.Body.Close()
+	}
+
+snippet inigo
+	package main
+
+	import (
+		"fmt"
+		"net/http"
+	)
+
+	func hello(res http.ResponseWriter, req *http.Request) {
+		fmt.Fprint(res, "Hello, my name is Inigo Montoya")
+	}
+
+	func main() {
+		http.HandleFunc("/", hello)
+		http.ListenAndServe("localhost:4000", nil)
+	}
+
+snippet read_status
+	package main
+
+	import (
+		"bufio"
+		"fmt"
+		"net"
+	)
+
+	func main() {
+		conn, _ := net.Dial("tcp", "golang.org:80")
+		fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
+		status, _ := bufio.NewReader(conn).ReadString('\n')
+		fmt.Println(status)
+	}
+
+snippet returns
+	package main
+
+	import (
+		"fmt"
+	)
+
+	func Names() (string, string) {
+		return "Foo", "Bar"
+	}
+
+	func main() {
+		n1, n2 := Names()
+		fmt.Println(n1, n2)
+
+		n3, _ := Names()
+		fmt.Println(n3)
+	}
+
+snippet returns2
+	package main
+
+	import (
+		"fmt"
+	)
+
+	func Names() (first string, second string) {
+		first = "Foo"
+		second = "Bar"
+		return
+	}
+
+	func main() {
+		n1, n2 := Names()
+		fmt.Println(n1, n2)
+	}
+
+snippet closing_connections
+	package main
+
+	import (
+		"fmt"
+		"io/ioutil"
+		"net/http"
+		"os"
+	)
+
+	func main() {
+		r, err := http.Get("http://mattfarina.com")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		o, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		r.Body.Close()
+		fmt.Println(string(o))
+
+		r2, err := http.Get("http://mattfarina.com/about")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		o, err = ioutil.ReadAll(r2.Body)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		r2.Body.Close()
+		fmt.Println(string(o))
+	}
+
+snippet grpc_client
+	package main
+
+	import (
+		"fmt"
+		"os"
+
+		pb "github.com/Masterminds/go-in-practice/chapter10/hellopb"
+		"golang.org/x/net/context"
+		"google.golang.org/grpc"
+	)
+
+	func main() {
+		address := "localhost:55555"
+		conn, err := grpc.Dial(address, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("unable to connect:", err)
+			os.Exit(1)
+		}
+		defer conn.Close()
+		c := pb.NewHelloClient(conn)
+
+		name := "Inigo Montoya"
+		hr := &pb.HelloRequest{Name: name}
+		r, err := c.Say(context.Background(), hr)
+		if err != nil {
+			fmt.Println("could not say:", err)
+			os.Exit(1)
+		}
+		fmt.Println(r.Message)
+	}
+
+snippet grpc_server
+	package main
+
+	import (
+		"log"
+		"net"
+
+		pb "github.com/Masterminds/go-in-practice/chapter10/hellopb"
+		"golang.org/x/net/context"
+		"google.golang.org/grpc"
+	)
+
+	type server struct{}
+
+	func (s *server) Say(ctx context.Context, in *pb.HelloRequest) (*pb.HelloResponse, error) {
+		msg := "Hello " + in.Name + "!"
+		return &pb.HelloResponse{Message: msg}, nil
+	}
+
+	func main() {
+		l, err := net.Listen("tcp", ":55555")
+		if err != nil {
+			log.Fatalf("failed to listen for tcp: %s", err)
+		}
+		s := grpc.NewServer()
+		pb.RegisterHelloServer(s, &server{})
+		s.Serve(l)
+	}
+
+
+snippet canary_test
+	package canary
+
+	import (
+		"io"
+		"testing"
+	)
+
+	type MyWriter struct{}
+
+	func (m *MyWriter) Write([]byte) error {
+		return nil
+	}
+
+	func main() {
+		m := map[string]interface{}{
+			"w": &MyWriter{},
+		}
+	}
+
+	func doSomething(m map[string]interface{}) {
+		w := m["w"].(io.Writer)
+	}
+
+	func TestWriter(t *testing.T) {
+		var _ io.Writer = &MyWriter{}
+	}
+
+snippet generative_test
+	package main
+
+	import (
+		"log"
+		"strings"
+		"testing"
+		"testing/quick"
+	)
+
+	// Pad whitespace-pads a string to a given length.
+	//
+	// If the string is longer than that, it truncates.
+	func Pad(s string, max uint) string {
+		log.Printf("Testing Len: %d, Str: %s\n", max, s)
+		l := uint(len(s))
+		if l > max {
+			return s[:max]
+		}
+		s += strings.Repeat(" ", int(max-l))
+		return s
+	}
+
+	func TestPad(t *testing.T) {
+		if r := Pad("test", 6); len(r) != 6 {
+			t.Errorf("Expected 6, got %d", len(r))
+		}
+	}
+
+	func TestPadGenerative(t *testing.T) {
+		fn := func(s string, max uint8) bool {
+			p := Pad(s, uint(max))
+			return len(p) == int(max)
+		}
+
+		if err := quick.Check(fn, &quick.Config{MaxCount: 200}); err != nil {
+			t.Error(err)
+		}
+	}
+
+snippet unit
+	package hello
+
+	func Hello() string {
+		return "hello"
+	}
+
+snippet unit_test
+	package hello
+
+	import "testing"
+
+	func TestHello(t *testing.T) {
+		if Hello() != "hello" {
+			t.Errorf("Expected 'hello', but got '%s'", Hello())
+		}
+	}
+
+snippet send_message
+	package msg
+
+	type Message struct {
+		// ...
+	}
+
+	func (m *Message) Send(email, subject string, body []byte) error {
+		// ...
+		return nil
+	}
+
+	type Messager interface {
+		Send(email, subject string, body []byte) error
+	}
+
+	func Alert(m Messager, problem []byte) error {
+		return m.Send("noc@example.com", "Critical Error", problem)
+	}
+
+snippet send_message_test
+	package msg
+
+	import (
+		"testing"
+	)
+
+	type MockMessage struct {
+		email, subject string
+		body           []byte
+	}
+
+	func (m *MockMessage) Send(email, subject string, body []byte) error {
+		m.email = email
+		m.subject = subject
+		m.body = body
+		return nil
+	}
+
+	func TestAlert(t *testing.T) {
+		msgr := new(MockMessage)
+		body := []byte("Critical Error")
+
+		Alert(msgr, body)
+
+		if msgr.subject != "Critical Error" {
+			t.Errorf("Expected 'Critical Error', Got '%s'", msgr.subject)
+		}
+		// ...
+	}
+
+snippet buffered_template
+	package main
+
+	import (
+		"bytes"
+		"fmt"
+		"html/template"
+		"net/http"
+	)
+
+	var t *template.Template
+
+	func init() {
+		t = template.Must(template.ParseFiles("./templates/simple.html"))
+	}
+
+	type Page struct {
+		Title, Content string
+	}
+
+	func diaplayPage(w http.ResponseWriter, r *http.Request) {
+		p := &Page{
+			Title:   "An Example",
+			Content: "Have fun stormin’ da castle.",
+		}
+		var b bytes.Buffer
+		err := t.Execute(&b, p)
+		if err != nil {
+			fmt.Fprint(w, "A error occured.")
+			return
+		}
+		b.WriteTo(w)
+	}
+
+	func main() {
+		http.HandleFunc("/", diaplayPage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet cache_template
+	package main
+
+	import (
+		"html/template"
+		"net/http"
+	)
+
+	var t = template.Must(template.ParseFiles("./templates/simple.html"))
+
+	type Page struct {
+		Title, Content string
+	}
+
+	func diaplayPage(w http.ResponseWriter, r *http.Request) {
+		p := &Page{
+			Title:   "An Example",
+			Content: "Have fun stormin’ da castle.",
+		}
+		t.Execute(w, p)
+	}
+
+	func main() {
+		http.HandleFunc("/", diaplayPage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet date_command
+	package main
+
+	import (
+		"html/template"
+		"net/http"
+		"time"
+	)
+
+	var tpl = `<!DOCTYPE HTML>
+	<html>
+	  <head>
+		<meta charset="utf-8">
+		<title>Date Example</title>
+	  </head>
+	  <body>
+		<p>{{.Date | dateFormat "Jan 2, 2006"}}</p>
+	  </body>
+	</html>`
+
+	var funcMap = template.FuncMap{
+		"dateFormat": dateFormat,
+	}
+
+	func dateFormat(layout string, d time.Time) string {
+		return d.Format(layout)
+	}
+
+	func serveTemplate(res http.ResponseWriter, req *http.Request) {
+		t := template.New("date")
+		t.Funcs(funcMap)
+		t.Parse(tpl)
+		data := struct{ Date time.Time }{
+			Date: time.Now(),
+		}
+		t.Execute(res, data)
+	}
+
+	func main() {
+		http.HandleFunc("/", serveTemplate)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet email
+	package main
+
+	import (
+		"bytes"
+		"fmt"
+		"net/smtp"
+		"strconv"
+		"text/template"
+	)
+
+	type EmailMessage struct {
+		From, Subject, Body string
+		To                  []string
+	}
+
+	type EmailCredentials struct {
+		Username, Password, Server string
+		Port                       int
+	}
+
+	const emailTemplate = `From: {{.From}}
+	To: {{.To}}
+	Subject {{.Subject}}
+
+	{{.Body}}
+	`
+
+	var t *template.Template
+
+	func init() {
+		t = template.New("email")
+		t.Parse(emailTemplate)
+	}
+
+	func main() {
+		message := &EmailMessage{
+			From:    "me@example.com",
+			To:      []string{"you@example.com"},
+			Subject: "A test",
+			Body:    "Just saying hi",
+		}
+
+		var body bytes.Buffer
+		t.Execute(&body, message)
+
+		fmt.Printf("%s", body.Bytes())
+
+		authCreds := &EmailCredentials{
+			Username: "myUsername",
+			Password: "myPass",
+			Server:   "smtp.example.com",
+			Port:     25,
+		}
+
+		auth := smtp.PlainAuth("",
+			authCreds.Username,
+			authCreds.Password,
+			authCreds.Server,
+		)
+
+		smtp.SendMail(authCreds.Server+":"+strconv.Itoa(authCreds.Port),
+			auth,
+			message.From,
+			message.To,
+			body.Bytes())
+	}
+
+snippet inherit
+	package main
+
+	import (
+		"html/template"
+		"net/http"
+	)
+
+	var t map[string]*template.Template
+
+	func init() {
+		t = make(map[string]*template.Template)
+		temp := template.Must(template.ParseFiles("base.html", "user.html"))
+		t["user.html"] = temp
+		temp = template.Must(template.ParseFiles("base.html", "page.html"))
+		t["page.html"] = temp
+	}
+
+	type Page struct {
+		Title, Content string
+	}
+
+	type User struct {
+		Username, Name string
+	}
+
+	func displayPage(w http.ResponseWriter, r *http.Request) {
+		p := &Page{
+			Title:   "An Example",
+			Content: "Have fun stormin’ da castle.",
+		}
+		t["page.html"].ExecuteTemplate(w, "base", p)
+	}
+
+	func displayUser(w http.ResponseWriter, r *http.Request) {
+		u := &User{
+			Username: "swordsmith",
+			Name:     "Inigo Montoya",
+		}
+		t["user.html"].ExecuteTemplate(w, "base", u)
+	}
+
+	func main() {
+		http.HandleFunc("/user", displayUser)
+		http.HandleFunc("/", displayPage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet nested_templates
+	package main
+
+	import (
+		"html/template"
+		"net/http"
+	)
+
+	var t *template.Template
+
+	func init() {
+		t = template.Must(template.ParseFiles("index.html", "head.html"))
+	}
+
+	type Page struct {
+		Title, Content string
+	}
+
+	func diaplayPage(w http.ResponseWriter, r *http.Request) {
+		p := &Page{
+			Title:   "An Example",
+			Content: "Have fun stormin’ da castle.",
+		}
+		t.ExecuteTemplate(w, "index.html", p)
+	}
+
+	func main() {
+		http.HandleFunc("/", diaplayPage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet object_templates
+	package main
+
+	import (
+		"bytes"
+		"html/template"
+		"net/http"
+	)
+
+	var t *template.Template
+	var qc template.HTML
+
+	func init() {
+		t = template.Must(template.ParseFiles("index.html", "quote.html"))
+	}
+
+	type Page struct {
+		Title   string
+		Content template.HTML
+	}
+
+	type Quote struct {
+		Quote, Person string
+	}
+
+	func main() {
+		q := &Quote{
+			Quote: `You keep using that word. I do not think
+					it means what you think it means.`,
+			Person: "Inigo Montoya",
+		}
+		var b bytes.Buffer
+		t.ExecuteTemplate(&b, "quote.html", q)
+		qc = template.HTML(b.String())
+
+		http.HandleFunc("/", diaplayPage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+	func diaplayPage(w http.ResponseWriter, r *http.Request) {
+		p := &Page{
+			Title:   "A Quote",
+			Content: qc,
+		}
+		t.ExecuteTemplate(w, "index.html", p)
+	}
+
+snippet simple_template
+	package main
+
+	import (
+		"html/template"
+		"net/http"
+	)
+
+	type Page struct {
+		Title, Content string
+	}
+
+	func diaplayPage(w http.ResponseWriter, r *http.Request) {
+		p := &Page{
+			Title:   "An Example",
+			Content: "Have fun stormin’ da castle.",
+		}
+		t := template.Must(template.ParseFiles("templates/simple.html"))
+		t.Execute(w, p)
+	}
+
+	func main() {
+		http.HandleFunc("/", diaplayPage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet cache_serving
+	package main
+
+	import (
+		"bytes"
+		"io"
+		"net/http"
+		"os"
+		"sync"
+		"time"
+	)
+
+	type cacheFile struct {
+		content io.ReadSeeker
+		modTime time.Time
+	}
+
+	var cache map[string]*cacheFile
+	var mutex = new(sync.RWMutex)
+
+	func main() {
+		cache = make(map[string]*cacheFile)
+		http.HandleFunc("/", serveFiles)
+		http.ListenAndServe(":8080", nil)
+	}
+
+	func serveFiles(res http.ResponseWriter, req *http.Request) {
+		mutex.RLock()
+		v, found := cache[req.URL.Path]
+		mutex.RUnlock()
+
+		if !found {
+			mutex.Lock()
+			defer mutex.Unlock()
+			fileName := "./files" + req.URL.Path
+			f, err := os.Open(fileName)
+			defer f.Close()
+
+			if err != nil {
+				http.NotFound(res, req)
+				return
+			}
+
+			var b bytes.Buffer
+			_, err = io.Copy(&b, f)
+			if err != nil {
+				http.NotFound(res, req)
+				return
+			}
+			r := bytes.NewReader(b.Bytes())
+
+			info, _ := f.Stat()
+			v = &cacheFile{
+				content: r,
+				modTime: info.ModTime(),
+			}
+			cache[req.URL.Path] = v
+		}
+
+		http.ServeContent(res, req, req.URL.Path, v.modTime, v.content)
+	}
+
+snippet embedded_files
+	package main
+
+	import (
+		"github.com/GeertJohan/go.rice"
+		"net/http"
+	)
+
+	func main() {
+		box := rice.MustFindBox("../files/")
+		httpbox := box.HTTPBox()
+		http.ListenAndServe(":8080", http.FileServer(httpbox))
+	}
+
+snippet file_increment_save
+	package main
+
+	import (
+		"bytes"
+		"fmt"
+		"html/template"
+		"io"
+		"net/http"
+		"os"
+	)
+
+	func fileForm(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			t, _ := template.ParseFiles("file_plus.html")
+			t.Execute(w, nil)
+		} else {
+			mr, err := r.MultipartReader()
+			values := make(map[string][]string)
+
+			if err != nil {
+				panic("Failed to read multipart message")
+			}
+
+			maxValueBytes := int64(10 << 20)
+			for {
+
+				part, err := mr.NextPart()
+				if err == io.EOF {
+
+					break
+				}
+
+				name := part.FormName()
+				if name == "" {
+					continue
+				}
+
+				filename := part.FileName()
+				var b bytes.Buffer
+				if filename == "" {
+					n, err := io.CopyN(&b, part, maxValueBytes)
+					if err != nil && err != io.EOF {
+						fmt.Fprint(w, "Error processing form")
+						return
+					}
+					maxValueBytes -= n
+					if maxValueBytes == 0 {
+						fmt.Fprint(w, "multipart message too large")
+						return
+					}
+					values[name] = append(values[name], b.String())
+					continue
+				}
+
+				dst, err := os.Create("/tmp/dstfile." + filename)
+				defer dst.Close()
+				if err != nil {
+					return
+				}
+				for {
+					buffer := make([]byte, 100000)
+					cBytes, err := part.Read(buffer)
+					if err == io.EOF {
+						break
+					}
+					dst.Write(buffer[0:cBytes])
+				}
+			}
+			fmt.Println("Upload done")
+			fmt.Println(values)
+
+			fmt.Fprint(w, "Upload complete")
+		}
+	}
+
+	func main() {
+		http.HandleFunc("/", fileForm)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet file_increment_save_notes
+	package main
+
+	import (
+		"fmt"
+		"html/template"
+		"io"
+		"net/http"
+		"os"
+	)
+
+	func fileForm(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			t, _ := template.ParseFiles("file.html")
+			t.Execute(w, nil)
+			fmt.Println(os.TempDir())
+		} else {
+
+			mr, err := r.MultipartReader()
+			if err != nil {
+				panic("Failed to read multipart message: ")
+			}
+
+			length := r.ContentLength
+			for {
+
+				part, err := mr.NextPart()
+				if err == io.EOF {
+
+					break
+				}
+				var read int64
+				var p float32
+
+				filename := part.FileName()
+				dst, err := os.Create("/tmp/dstfile." + filename)
+				if err != nil {
+					return
+				}
+				for {
+					buffer := make([]byte, 100000)
+					cBytes, err := part.Read(buffer)
+					if err == io.EOF {
+						break
+					}
+					read = read + int64(cBytes)
+					//fmt.Printf("read: %v \n",read )
+					p = float32(read) / float32(length) * 100
+					fmt.Printf("progress: %v \n", p)
+					dst.Write(buffer[0:cBytes])
+				}
+			}
+
+			// f, h, err := r.FormFile("file")
+			// if err != nil {
+			// 	panic(err)
+			// }
+			// defer f.Close()
+			// filename := "/tmp/" + h.Filename
+			// out, _ := os.Create(filename)
+			// defer out.Close()
+			// fmt.Println(h.Header["Content-Type"][0])
+
+			// buff := make([]byte, 512)
+			// _, err = f.Read(buff)
+			// filetype := http.DetectContentType(buff)
+			// fmt.Println(filetype)
+
+			// io.Copy(out, f)
+			fmt.Println("Upload done")
+
+			fmt.Fprint(w, "Upload complete")
+		}
+	}
+
+	func main() {
+		http.HandleFunc("/", fileForm)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet file_mime_type
+	package main
+
+	import (
+		"fmt"
+		"html/template"
+		"io"
+		"net/http"
+		"os"
+	)
+
+	func fileForm(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			t, _ := template.ParseFiles("file.html")
+			t.Execute(w, nil)
+		} else {
+			f, h, err := r.FormFile("file")
+			if err != nil {
+				panic(err)
+			}
+			defer f.Close()
+			filename := "/tmp/" + h.Filename
+			out, _ := os.Create(filename)
+			defer out.Close()
+			fmt.Println(h.Header["Content-Type"][0])
+
+			buff := make([]byte, 512)
+			_, err = f.Read(buff)
+			filetype := http.DetectContentType(buff)
+			fmt.Println(filetype)
+
+			io.Copy(out, f)
+			fmt.Fprint(w, "Upload complete")
+		}
+	}
+
+	func main() {
+		http.HandleFunc("/", fileForm)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet file_not_found
+	package main
+
+	import (
+		"fmt"
+		fs "github.com/Masterminds/go-fileserver"
+		"net/http"
+	)
+
+	func main() {
+
+		fs.NotFoundHandler = func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			fmt.Fprintln(w, "The requested page could not be found.")
+		}
+
+		dir := http.Dir("./files")
+		http.ListenAndServe(":8080", fs.FileServer(dir))
+	}
+
+snippet file_serving
+	package main
+
+	import (
+		"net/http"
+	)
+
+	func main() {
+		dir := http.Dir("./files")
+		http.ListenAndServe(":8080", http.FileServer(dir))
+	}
+
+snippet form_file
+	package main
+
+	import (
+		"fmt"
+		"html/template"
+		"io"
+		"net/http"
+		"os"
+	)
+
+	func fileForm(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			t, _ := template.ParseFiles("file.html")
+			t.Execute(w, nil)
+		} else {
+			f, h, err := r.FormFile("file")
+			if err != nil {
+				panic(err)
+			}
+			defer f.Close()
+			filename := "/tmp/" + h.Filename
+			out, _ := os.Create(filename)
+			defer out.Close()
+
+			io.Copy(out, f)
+			fmt.Fprint(w, "Upload complete")
+		}
+	}
+
+	func main() {
+		http.HandleFunc("/", fileForm)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet form_file_multiple
+	package main
+
+	import (
+		"fmt"
+		"html/template"
+		"io"
+		"net/http"
+		"os"
+	)
+
+	func fileForm(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			t, _ := template.ParseFiles("file_multiple.html")
+			t.Execute(w, nil)
+		} else {
+			err := r.ParseMultipartForm(16 << 20)
+			if err != nil {
+				fmt.Fprint(w, err)
+				return
+			}
+
+			data := r.MultipartForm
+			files := data.File["files"]
+			for _, fh := range files {
+				f, err := fh.Open()
+				defer f.Close()
+				if err != nil {
+					fmt.Fprint(w, err)
+					return
+				}
+
+				out, err := os.Create("/tmp/" + fh.Filename)
+				defer out.Close()
+				if err != nil {
+					fmt.Fprint(w, err)
+					return
+				}
+
+				_, err = io.Copy(out, f)
+
+				if err != nil {
+					fmt.Fprintln(w, err)
+					return
+				}
+			}
+
+			fmt.Fprint(w, "Upload complete")
+		}
+	}
+
+	func main() {
+		http.HandleFunc("/", fileForm)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet one_level_serving
+	package main
+
+	import (
+		"fmt"
+		"net/http"
+		"path"
+	)
+
+	func main() {
+		pr := newPathResolver()
+		pr.Add("GET /hello", hello)
+		dir := http.Dir("./files")
+		handler := http.StripPrefix("/static/", http.FileServer(dir))
+		pr.Add("GET /static/*", handler.ServeHTTP)
+		http.ListenAndServe(":8080", pr)
+	}
+
+	func newPathResolver() *pathResolver {
+		return &pathResolver{make(map[string]http.HandlerFunc)}
+	}
+
+	type pathResolver struct {
+		handlers map[string]http.HandlerFunc
+	}
+
+	func (p *pathResolver) Add(path string, handler http.HandlerFunc) {
+		p.handlers[path] = handler
+	}
+
+	func (p *pathResolver) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+		check := req.Method + " " + req.URL.Path
+		for pattern, handlerFunc := range p.handlers {
+			if ok, err := path.Match(pattern, check); ok && err == nil {
+				handlerFunc(res, req)
+				return
+			} else if err != nil {
+				fmt.Fprint(res, err)
+			}
+		}
+
+		http.NotFound(res, req)
+	}
+
+	func hello(res http.ResponseWriter, req *http.Request) {
+		query := req.URL.Query()
+		name := query.Get("name")
+		if name == "" {
+			name = "Inigo Montoya"
+		}
+		fmt.Fprint(res, "Hello, my name is ", name)
+	}
+
+snippet serve_alternate_location
+	package main
+
+	import (
+		"flag"
+		"html/template"
+		"net/http"
+	)
+
+	var t *template.Template
+	var l = flag.String("location", "http://localhost:8080", "A location.")
+
+	var tpl = `<!DOCTYPE HTML>
+	<html>
+	  <head>
+		<meta charset="utf-8">
+		<title>A Demo</title>
+		<link rel="stylesheet" href="{{.Location}}/styles.css">
+	  </head>
+	  <body>
+		<p>A demo.</p>
+	  </body>
+	</html>`
+
+	func init() {
+		t = template.Must(template.New("date").Parse(tpl))
+	}
+
+	func servePage(res http.ResponseWriter, req *http.Request) {
+		data := struct{ Location *string }{
+			Location: l,
+		}
+		t.Execute(res, data)
+	}
+
+	func main() {
+		flag.Parse()
+		http.HandleFunc("/", servePage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet serve_subdir_simple
+	package main
+
+	import (
+		"fmt"
+		"net/http"
+	)
+
+	func main() {
+		dir := http.Dir("./files/")
+		handler := http.StripPrefix("/static/", http.FileServer(dir))
+		http.Handle("/static/", handler)
+
+		http.HandleFunc("/", homePage)
+		http.ListenAndServe(":8080", nil)
+	}
+
+	func homePage(res http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/" {
+			http.NotFound(res, req)
+			return
+		}
+		fmt.Fprint(res, "The homepage.")
+	}
+
+snippet servefile
+	package main
+
+	import (
+		"net/http"
+	)
+
+	func main() {
+		http.HandleFunc("/", readme)
+		http.ListenAndServe(":8080", nil)
+	}
+
+	func readme(res http.ResponseWriter, req *http.Request) {
+		http.ServeFile(res, req, "./files/readme.txt")
+	}
+
+snippet custom_client_timeout
+	package main
+
+	import (
+		"fmt"
+		"io/ioutil"
+		"net/http"
+		"os"
+		"time"
+	)
+
+	func main() {
+		cc := &http.Client{Timeout: time.Second}
+		res, err := cc.Get("http://goinpracticebook.com")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		b, _ := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		fmt.Printf("%s", b)
+	}
+
+snippet custom_request_delete
+	package main
+
+	import (
+		"fmt"
+		"net/http"
+	)
+
+	func main() {
+		req, _ := http.NewRequest("DELETE", "http://example.com/foo/bar", nil)
+		res, _ := http.DefaultClient.Do(req)
+		fmt.Printf("%s", res.Status)
+	}
+
+snippet get_custom_error
+	package main
+
+	import (
+		"encoding/json"
+		"fmt"
+		"io/ioutil"
+		"net/http"
+		"os"
+	)
+
+	type Error struct {
+		HTTPCode int    `json:"-"`
+		Code     int    `json:"code,omitempty"`
+		Message  string `json:"message"`
+	}
+
+	func (e Error) Error() string {
+		fs := "HTTP: %d, Code: %d, Message: %s"
+		return fmt.Sprintf(fs, e.HTTPCode, e.Code, e.Message)
+	}
+
+	func get(u string) (*http.Response, error) {
+		res, err := http.Get(u)
+		if err != nil {
+			return res, err
+		}
+
+		if res.StatusCode < 200 || res.StatusCode >= 300 {
+			if res.Header.Get("Content-Type") != "application/json" {
+				sm := "Unknown error. HTTP status: %s"
+				return res, fmt.Errorf(sm, res.Status)
+			}
+			b, _ := ioutil.ReadAll(res.Body)
+			res.Body.Close()
+			var data struct {
+				Err Error `json:"error"`
+			}
+			err = json.Unmarshal(b, &data)
+			if err != nil {
+				sm := "Unable to parse json: %s. HTTP status: %s"
+				return res, fmt.Errorf(sm, err, res.Status)
+			}
+			data.Err.HTTPCode = res.StatusCode
+
+			return res, data.Err
+		}
+
+		return res, nil
+	}
+
+	func main() {
+		res, err := get("http://localhost:8080")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		b, _ := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		fmt.Printf("%s", b)
+	}
+
+snippet get_semantic_version_api
+	package main
+
+	import (
+		"fmt"
+		"io/ioutil"
+		"net/http"
+	)
+
+	func main() {
+		ct := "application/vnd.mytodos.json; version=2.0"
+		req, _ := http.NewRequest("GET", "http://localhost:8080/test", nil)
+		req.Header.Set("Accept", ct)
+		res, _ := http.DefaultClient.Do(req)
+		if res.Header.Get("Content-Type") != ct {
+			fmt.Println("Unexpected content type returned")
+			return
+		}
+		b, _ := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		fmt.Printf("%s", b)
+	}
+
+snippet http_custom_error
+	package main
+
+	import (
+		"encoding/json"
+		"fmt"
+		"net/http"
+	)
+
+	type Error struct {
+		HTTPCode int    `json:"-"`
+		Code     int    `json:"code,omitempty"`
+		Message  string `json:"message"`
+	}
+
+	func JSONError(w http.ResponseWriter, e Error) {
+		data := struct {
+			Err Error `json:"error"`
+		}{e}
+		b, err := json.Marshal(data)
+		if err != nil {
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(e.HTTPCode)
+		fmt.Fprint(w, string(b))
+	}
+
+	func displayError(w http.ResponseWriter, r *http.Request) {
+		e := Error{
+			HTTPCode: http.StatusForbidden,
+			Code:     123,
+			Message:  "An Error Occurred",
+		}
+		JSONError(w, e)
+	}
+
+	func main() {
+		http.HandleFunc("/", displayError)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet http_error
+	package main
+
+	import "net/http"
+
+	func displayError(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "An Error Occurred", http.StatusForbidden)
+	}
+
+	func main() {
+		http.HandleFunc("/", displayError)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet http_timeout_handling
+	package main
+
+	import (
+		// "io"
+		"fmt"
+		"io"
+		"net"
+		"net/http"
+		"net/url"
+		"os"
+		"strconv"
+		"strings"
+		"time"
+	)
+
+	func main() {
+		file, err := os.Create("ff.dmg")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+
+		location := "https://download-installer.cdn.mozilla.net/pub/firefox/releases/40.0.3/mac/en-US/Firefox%2040.0.3.dmg"
+		err = download(location, file, 100)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fi, err := file.Stat()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Got it with %v bytes downloaded", fi.Size())
+	}
+
+	func download(location string, file *os.File, retries int64) error {
+		req, err := http.NewRequest("GET", location, nil)
+		if err != nil {
+			return err
+		}
+		fi, err := file.Stat()
+		if err != nil {
+			return err
+		}
+		current := fi.Size()
+		if current > 0 {
+			start := strconv.FormatInt(current, 10)
+			req.Header.Set("Range", "bytes="+start+"-")
+		}
+
+		cc := &http.Client{Timeout: 5 * time.Minute}
+		res, err := cc.Do(req)
+		if err != nil && hasTimedOut(err) {
+			if retries > 0 {
+				return download(location, file, retries-1)
+			}
+			return err
+		} else if err != nil {
+			return err
+		}
+
+		if res.StatusCode < 200 || res.StatusCode >= 300 {
+			errFmt := "Unsuccess HTTP request. Status: %s"
+			return fmt.Errorf(errFmt, res.Status)
+		}
+
+		if res.Header.Get("Accept-Ranges") != "bytes" {
+			retries = 0
+		}
+
+		_, err = io.Copy(file, res.Body)
+		if err != nil && hasTimedOut(err) {
+			if retries > 0 {
+				return download(location, file, retries-1)
+			}
+			return err
+		} else if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	func hasTimedOut(err error) bool {
+		switch err := err.(type) {
+		case *url.Error:
+			if err, ok := err.Err.(net.Error); ok && err.Timeout() {
+				return true
+			}
+		case net.Error:
+			if err.Timeout() {
+				return true
+			}
+		case *net.OpError:
+			if err.Timeout() {
+				return true
+			}
+		}
+
+		errTxt := "use of closed network connection"
+		if err != nil && strings.Contains(err.Error(), errTxt) {
+			return true
+		}
+
+		return false
+	}
+
+snippet parse_arbitrary_json
+	package main
+
+	import (
+		"encoding/json"
+		"fmt"
+		"os"
+	)
+
+	var ks = []byte(`{
+	"firstName": "Jean",
+	"lastName": "Bartik",
+	"age": 86,
+	"education": [
+		{
+			"institution": "Northwest Missouri State Teachers College",
+			"degree": "Bachelor of Science in Mathematics"
+		},
+		{
+			"institution": "University of Pennsylvania",
+			"degree": "Masters in English"
+		}
+	],
+	"spouse": "William Bartik",
+	"children": [
+		"Timothy John Bartik",
+		"Jane Helen Bartik",
+		"Mary Ruth Bartik"
+	]
+	}`)
+
+	func main() {
+		var f interface{}
+		err := json.Unmarshal(ks, &f)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println(f)
+
+		m := f.(map[string]interface{})
+		fmt.Println(m["firstName"])
+
+		fmt.Print("interface{} ")
+		printJSON(f)
+	}
+
+	func printJSON(v interface{}) {
+		switch vv := v.(type) {
+		case string:
+			fmt.Println("is string", vv)
+		case float64:
+			fmt.Println("is float64", vv)
+		case []interface{}:
+			fmt.Println("is an array:")
+			for i, u := range vv {
+				fmt.Print(i, " ")
+				printJSON(u)
+			}
+		case map[string]interface{}:
+			fmt.Println("is an object:")
+			for i, u := range vv {
+				fmt.Print(i, " ")
+				printJSON(u)
+			}
+		default:
+			fmt.Println("Unknown type")
+		}
+	}
+
+snippet semantic_version_api
+	package main
+
+	import (
+		"encoding/json"
+		"fmt"
+		"net/http"
+	)
+
+	func main() {
+		http.HandleFunc("/test", displayTest)
+		http.ListenAndServe(":8080", nil)
+	}
+
+	func displayTest(w http.ResponseWriter, r *http.Request) {
+		t := r.Header.Get("Accept")
+		var err error
+		var b []byte
+		var ct string
+		switch t {
+		case "application/vnd.mytodos.json; version=2.0":
+			data := testMessageV2{"Version 2"}
+			b, err = json.Marshal(data)
+			ct = "application/vnd.mytodos.json; version=2.0"
+		case "application/vnd.mytodos.json; version=1.0":
+			fallthrough
+		default:
+			data := testMessageV1{"Version 1"}
+			b, err = json.Marshal(data)
+			ct = "application/vnd.mytodos.json; version=1.0"
+		}
+
+		if err != nil {
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		w.Header().Set("Content-Type", ct)
+		fmt.Fprint(w, string(b))
+	}
+
+	type testMessageV1 struct {
+		Message string `json:"message"`
+	}
+
+	type testMessageV2 struct {
+		Info string `json:"info"`
+	}
+
+snippet simple_get
+	package main
+
+	import (
+		"fmt"
+		"io/ioutil"
+		"net/http"
+	)
+
+	func main() {
+		res, _ := http.Get("http://goinpracticebook.com")
+		b, _ := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		fmt.Printf("%s", b)
+	}
+
+snippet simple_json_parser
+	package main
+
+	import (
+		"encoding/json"
+		"fmt"
+	)
+
+	type Person struct {
+		Name string `json:"name"`
+	}
+
+	var JSON = `{
+	  "name": "Miracle Max"
+	}`
+
+	func main() {
+		var p Person
+		err := json.Unmarshal([]byte(JSON), &p)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println(p)
+	}
+
+snippet versioned_url_api
+	package main
+
+	import (
+		"encoding/json"
+		"fmt"
+		"net/http"
+	)
+
+	type testMessage struct {
+		Message string `json:"message"`
+	}
+
+	func displayTest(w http.ResponseWriter, r *http.Request) {
+		data := testMessage{"A test message."}
+		b, err := json.Marshal(data)
+		if err != nil {
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, string(b))
+	}
+
+	func main() {
+		http.HandleFunc("/api/v1/test", displayTest)
+		http.ListenAndServe(":8080", nil)
+	}
+
+snippet api_interface
+	package main
+
+	import (
+		"bytes"
+		"fmt"
+		"io"
+		"io/ioutil"
+		"os"
+		"path/filepath"
+	)
+
+	type File interface {
+		Load(string) (io.ReadCloser, error)
+		Save(string, io.ReadSeeker) error
+	}
+
+	type LocalFile struct {
+		Base string
+	}
+
+	func (l LocalFile) Load(path string) (io.ReadCloser, error) {
+		p := filepath.Join(l.Base, path)
+		return os.Open(p)
+	}
+
+	func (l LocalFile) Save(path string, body io.ReadSeeker) error {
+		p := filepath.Join(l.Base, path)
+		d := filepath.Dir(p)
+		err := os.MkdirAll(d, os.ModeDir|os.ModePerm)
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Create(p)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = io.Copy(f, body)
+		return err
+	}
+
+	func fileStore() (File, error) {
+		return &LocalFile{Base: "/Users/mfarina/store"}, nil
+	}
+
+	func main() {
+		content := `Lorem ipsum dolor sit amet, consectetur` +
+			`adipiscing elit. Donec a diam lectus.Sed sit` +
+			`amet ipsum mauris. Maecenascongue ligula ac` +
+			`quam viverra nec consectetur ante hendrerit.`
+		body := bytes.NewReader([]byte(content))
+
+		store, err := fileStore()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Storing content...")
+		err = store.Save("foo/bar", body)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Retrieving content...")
+		c, err := store.Load("foo/bar")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		o, err := ioutil.ReadAll(c)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println(string(o))
+	}
+
+snippet api_interface_with_errors
+	package main
+
+	import (
+		"bytes"
+		"errors"
+		"fmt"
+		"io"
+		"io/ioutil"
+		"log"
+		"os"
+		"path/filepath"
+	)
+
+	var (
+		ErrFileNotFound   = errors.New("File not found")
+		ErrCannotLoadFile = errors.New("Unable to load file")
+		ErrCannotSaveFile = errors.New("Unable to save file")
+	)
+
+	type File interface {
+		Load(string) (io.ReadCloser, error)
+		Save(string, io.ReadSeeker) error
+	}
+
+	type LocalFile struct {
+		Base string
+	}
+
+	func (l LocalFile) Load(path string) (io.ReadCloser, error) {
+		p := filepath.Join(l.Base, path)
+		var oerr error
+		o, err := os.Open(p)
+		if err != nil && os.IsNotExist(err) {
+			log.Printf("Unable to find %s", path)
+			oerr = ErrFileNotFound
+		} else if err != nil {
+			log.Printf("Error loading file %s, err: %s", path, err)
+			oerr = ErrCannotLoadFile
+		}
+		return o, oerr
+	}
+
+	func (l LocalFile) Save(path string, body io.ReadSeeker) error {
+		p := filepath.Join(l.Base, path)
+		d := filepath.Dir(p)
+		err := os.MkdirAll(d, os.ModeDir|os.ModePerm)
+		if err != nil {
+			log.Printf("Cannot make directory '%s', err: %s", d, err)
+			return ErrCannotSaveFile
+		}
+
+		f, err := os.Create(p)
+		if err != nil {
+			log.Printf("Cannot create file '%s', err: %s", p, err)
+			return ErrCannotSaveFile
+		}
+		defer f.Close()
+
+		_, err = io.Copy(f, body)
+		if err != nil {
+			log.Printf("Cannot save file '%s', err: %s", path, err)
+			return ErrCannotSaveFile
+		}
+		return nil
+	}
+
+	func fileStore() (File, error) {
+		return &LocalFile{Base: "/Users/mfarina/store"}, nil
+	}
+
+	func main() {
+		content := `Lorem ipsum dolor sit amet, consectetur` +
+			`adipiscing elit. Donec a diam lectus.Sed sit` +
+			`amet ipsum mauris. Maecenascongue ligula ac` +
+			`quam viverra nec consectetur ante hendrerit.`
+		body := bytes.NewReader([]byte(content))
+
+		store, err := fileStore()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Storing content...")
+		err = store.Save("foo/bar", body)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Retrieving content...")
+		c, err := store.Load("foo/bar")
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		o, err := ioutil.ReadAll(c)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println(string(o))
+	}
+
+snippet detect_dep
+	package main
+
+	import (
+		"fmt"
+		"log"
+		"os/exec"
+	)
+
+	func main() {
+		err := checkDep("fortune")
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		fmt.Println("Time to get your fortunte")
+	}
+
+	func checkDep(name string) error {
+		if _, err := exec.LookPath(name); err != nil {
+			es := "Could not find '%s' in PATH: %s"
+			return fmt.Errorf(es, name, err)
+		}
+
+		return nil
+	}
+
+snippet hostlookup
+	package main
+
+	import (
+		"fmt"
+		"net"
+		"os"
+	)
+
+	func main() {
+		name, err := os.Hostname()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		addrs, err := net.LookupHost(name)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		for _, a := range addrs {
+			fmt.Println(a)
+		}
+	}
+
+snippet runtime
+	package main
+
+	import (
+		"log"
+		"runtime"
+		"time"
+	)
+
+	func monitorRuntime() {
+		log.Println("Number of CPUs:", runtime.NumCPU())
+		m := &runtime.MemStats{}
+		for {
+			r := runtime.NumGoroutine()
+			log.Println("Number of goroutines", r)
+
+			runtime.ReadMemStats(m)
+			log.Println("Allocated memory", m.Alloc)
+			time.Sleep(10 * time.Second)
+		}
+	}
+
+	func main() {
+		go monitorRuntime()
+
+		i := 0
+		for i < 40 {
+			go func() {
+				time.Sleep(15 * time.Second)
+			}()
+			i = i + 1
+			time.Sleep(1 * time.Second)
+		}
+	}
