@@ -578,3 +578,41 @@ snippet retry_using_timeout
 		}
 		time.Sleep(time.Second << uint(tries)) // exponential back-off
 	}
+
+snippet read_json_lines_stdin
+	input := bufio.NewScanner(os.Stdin)
+	for input.Scan() {
+		line := input.Text()
+		fmt.Printf("%v\n", line)
+		var m Message
+
+		if err := json.NewDecoder(strings.NewReader(line)).Decode(&m); err != nil {
+			log.Printf("err = %+v\n", err)
+		}
+		fmt.Printf("%+v\n", m)
+	}
+
+
+snippet  read_json_lines_stdin_output_chan
+	input := bufio.NewScanner(os.Stdin)
+
+	chanOwner := func() <-chan Message {
+		resultStream := make(chan Message)
+		go func() {
+			defer close(resultStream)
+			var m Message
+			for input.Scan() {
+				line := input.Text()
+				if err := json.NewDecoder(strings.NewReader(line)).Decode(&m); err != nil {
+					log.Printf("err = %+v\n", err)
+				}
+				resultStream <- m
+			}
+		}()
+		return resultStream
+	}
+
+	resultStream := chanOwner()
+	for result := range resultStream {
+		fmt.Printf("Received: %+v\n", result)
+	}
