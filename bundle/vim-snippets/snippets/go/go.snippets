@@ -253,3 +253,8 @@ snippet bench benchmark function
 		}
 	}
 	${0}
+snippet iferrpanic
+	if err := ${1:what}; err != nil {
+		panic(err)
+		${0}
+	}

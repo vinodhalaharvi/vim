@@ -50,7 +50,7 @@ kget() {
         kubectl get "${1}" | _inline_fzf | awk '{print $1}' | xargs kubectl get -o yaml "${1}"
     ;;
     *)
-        kubectl get "${1}" --all-namespaces | _inline_fzf | awk '{print $1, $2}' | xargs kubectl get -o yaml "${1}" -n
+        kubectl get "${1}" -o wide --all-namespaces | _inline_fzf | awk '{print $1, $2}' | xargs kubectl get -o yaml "${1}" -n
     ;;
     esac
 }
